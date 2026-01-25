@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>⚡ DRIVE - 異常波動偵測</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
+        .card { background: #0a0a0a; border: 1px solid #1a3a1a; transition: all 0.3s; }
+        .card:hover { border-color: #0f0; box-shadow: 0 0 15px rgba(0,255,0,0.2); }
+        .drive-high { color: #ffff00; text-shadow: 0 0 8px rgba(255,255,0,0.5); }
+    </style>
+</head>
+<body class="p-5">
+    <div class="max-w-6xl mx-auto">
+        <div class="flex justify-between items-center border-b border-green-900 pb-4 mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-green-500">⚡ DRIVE DETECTOR</h1>
+                <p class="text-xs text-gray-500">尋找「量平波大」的真空標的 (每 3 秒更新)</p>
+            </div>
+            <div id="status" class="text-xs text-gray-400">連線中...</div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 mb-6 text-xs text-gray-400">
+            <div class="bg-zinc-900 p-2 rounded">1. 波動力 > 0.05% (啟動)</div>
+            <div class="bg-zinc-900 p-2 rounded">2. 排除成交額 < 10M (過濾死幣)</div>
+            <div class="bg-zinc-900 p-2 rounded">3. 推動效率 (Drive) = 波動 / 量能變動</div>
+        </div>
+
+        <div id="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            </div>
+    </div>
+
+    <script>
+        const EXCLUDE = ['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT','BNBUSDT'];
+        let stats = {};
+
+        async function update() {
+            try {
+                const res = await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr');
+                const data = await res.json();
+                const list = document.getElementById('list');
+                const results = [];
+
+                data.forEach(c => {
+                    const s = c.symbol;
+                    if (!s.endsWith('USDT') || EXCLUDE.includes(s)) return;
+
+                    const price = parseFloat(c.lastPrice);
+                    const vol = parseFloat(c.quoteVolume); // 24h 成交額
+                    
+                    if (!stats[s]) {
+                        stats[s] = { p: price, v: vol };
+                        return;
+                    }
+
+                    // 1. 計算這 3 秒內的價格變動率 (%)
+                    const pMove = Math.abs((price - stats[s].p) / stats[s].p) * 100;
+                    // 2. 計算成交量的相對變化
+                    const vMove = Math.abs((vol - stats[s].v) / stats[s].v) * 100;
+                    // 3. 推動力 Drive (如果成交量沒動但價格動了，Drive 會極高)
+                    // 我們給成交量一個微小的基數避免除以零
+                    const drive = vMove > 0 ? (pMove / (vMove + 0.0001)) * 100 : 0;
+
+                    // 記錄當前，供下次對比
+                    stats[s].p = price;
+                    stats[s].v = vol;
+
+                    // 門檻：排除成交額太小的、波動太微弱的
+                    if (vol > 10000000 && pMove > 0.03) {
+                        results.push({ s, pMove, vMove, drive, price, vol });
+                    }
+                });
+
+                // 按 Drive 排序
+                results.sort((a, b) => b.drive - a.drive);
+
+                list.innerHTML = '';
+                results.slice(0, 12).forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'card p-4 rounded-lg';
+                    div.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xl font-bold text-white">${item.s.replace('USDT','')}</span>
+                            <span class="text-[10px] bg-green-900 px-1 rounded text-green-300">ACTVE</span>
+                        </div>
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">波動力:</span>
+                                <span class="text-white">${item.pMove.toFixed(3)}%</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">量能耗損:</span>
+                                <span class="text-purple-400">${item.vMove.toFixed(4)}%</span>
+                            </div>
+                            <div class="mt-3 pt-2 border-t border-zinc-800 flex justify-between items-baseline">
+                                <span class="text-gray-500 text-xs">⚡ 推動效率:</span>
+                                <span class="text-2xl font-black ${item.drive > 100 ? 'drive-high' : 'text-green-500'}">
+                                    ${item.drive.toFixed(0)}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+                document.getElementById('status').innerText = `更新時間: ${new Date().toLocaleTimeString()}`;
+            } catch (e) {
+                document.getElementById('status').innerText = '連線異常，重試中...';
+            }
+        }
+
+        setInterval(update, 3000);
+        update();
+    </script>
+</body>
+</html>
