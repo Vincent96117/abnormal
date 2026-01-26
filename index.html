@@ -1,17 +1,16 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ DRIVE SNIPER V5.2.0 - 籌碼突破版</title>
+    <title>⚡ DRIVE SNIPER V5.2.2 - 垃圾過濾版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
         .card { background: #0a0a0a; border: 1px solid #1a3a1a; cursor: pointer; transition: all 0.2s; }
         .hunt-trigger { border: 2px solid #a855f7 !important; background: #1e1b4b !important; animation: blink 0.8s infinite; }
         .pinned { border: 2px solid #3b82f6 !important; background: #081221 !important; }
-        .funding-danger { border-color: #ef4444 !important; }
+        .funding-danger { border: 2px solid #ef4444 !important; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
         .score-val { font-size: 1.4rem; font-weight: 900; color: #eab308; line-height: 1; }
-        /* 開關樣式 */
         .toggle-btn { transition: all 0.3s; border: 1px solid #333; }
         .toggle-active { background: #ef4444 !important; color: white !important; box-shadow: 0 0 15px #ef4444; border-color: #fff; }
     </style>
@@ -20,9 +19,12 @@
     <div class="flex-1 flex flex-col p-4 overflow-hidden">
         <div class="bg-zinc-900 p-4 rounded-xl mb-4 border border-white/10 shadow-2xl">
             <div class="flex justify-between items-center mb-4">
-                <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.2.0</h1>
+                <div class="flex flex-col">
+                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.2.2</h1>
+                    <div id="status" class="text-[9px] text-zinc-500 font-bold uppercase mt-1">Initializing...</div>
+                </div>
                 <div class="flex gap-4 items-center">
-                    <button id="breakoutToggle" onclick="toggleBreakout()" class="toggle-btn bg-black text-[10px] px-4 py-2 rounded-lg font-black uppercase text-zinc-500">
+                    <button id="breakoutToggle" onclick="toggleBreakout()" class="toggle-btn bg-black text-[10px] px-4 py-2 rounded-lg font-black uppercase text-zinc-400">
                         ⚡ Breakout Only (站上密集區)
                     </button>
                     <input type="text" id="searchInput" placeholder="搜尋幣名..." class="bg-black border border-zinc-800 px-3 py-1 rounded text-sm text-blue-400 outline-none w-40">
@@ -47,7 +49,6 @@
     </div>
 
     <div class="w-80 bg-zinc-950 border-l border-zinc-800 flex flex-col p-4">
-        <div id="status" class="text-[10px] mb-2 text-blue-500 font-bold uppercase">System Init...</div>
         <div class="font-black text-xs text-zinc-500 uppercase mb-4 border-b border-zinc-800 pb-2">System Logs</div>
         <div id="logs" class="flex-1 overflow-y-auto space-y-2 text-[10px] font-mono"></div>
     </div>
@@ -60,7 +61,6 @@
     function toggleBreakout() {
         IS_BREAKOUT_ONLY = !IS_BREAKOUT_ONLY;
         document.getElementById('breakoutToggle').classList.toggle('toggle-active');
-        update();
     }
 
     function addLog(msg, color="text-zinc-500") {
@@ -102,11 +102,9 @@
                     return; 
                 }
 
-                // 更新數據 (5秒一次)
-                stats[s].vHist.push(vNow); if (stats[s].vHist.length > 12) stats[s].vHist.shift(); // 12 * 5s = 1min
+                stats[s].vHist.push(vNow); if (stats[s].vHist.length > 12) stats[s].vHist.shift(); 
                 stats[s].frHist.push(fNow); if (stats[s].frHist.length > 12) stats[s].frHist.shift();
                 
-                // 區間邏輯檢查: 必須蒐集滿 1 分鐘 (12個樣本) 才開始判斷
                 if (stats[s].frHist.length < 12) {
                     document.getElementById('status').innerText = `Syncing... (${stats[s].frHist.length}/12)`;
                     return;
@@ -116,6 +114,7 @@
                 const avgVol = stats[s].vHist.reduce((a,b)=>a+b,0) / stats[s].vHist.length;
                 const volRatio = vNow / (avgVol || 1);
                 const slope = (fNow - stats[s].frHist[0]) / Math.abs(stats[s].frHist[0] || 0.0001);
+                
                 const vDelta = Math.abs(vNow - stats[s].v);
                 const pDelta = Math.abs(pNow - stats[s].p) / stats[s].p;
                 const instDrv = vDelta > 0 ? (pDelta / vDelta) * 100000000 : 0;
@@ -126,29 +125,29 @@
                 const isPinned = pinned.has(s);
                 const isSearching = keyword && s.includes(keyword);
                 
-                // 站上密集區判斷: 高低點平均
                 const denseZone = (pHigh + pLow) / 2;
                 const isBreakingOut = pNow > denseZone;
-
-                // 觸發警報
                 const isTriggered = (slope <= FILTER.SLP && filterScore >= FILTER.DRV_SCORE && volRatio >= FILTER.VOL_RATIO);
-                const isFundingDanger = Math.abs(fNow) >= 0.0005;
+                
+                // 【核心修改】資費警報邏輯：資費過標且分數必須大於滑桿的一半 (避免垃圾)
+                const isFundingDanger = Math.abs(fNow) >= 0.0005 && filterScore > (FILTER.DRV_SCORE / 2);
 
-                // 總過濾邏輯
+                // 總過濾邏輯：只有觸發、釘選、搜尋、或資費高且有一定分數的才顯示
                 let shouldShow = isTriggered || isPinned || isSearching || isFundingDanger;
-                if (IS_BREAKOUT_ONLY && !isBreakingOut) shouldShow = false;
-                if (isPinned || isSearching) shouldShow = true; // 搜尋與釘選擁有最高優先權
+                
+                // 如果開啟密集區過濾，未站上且非釘選/搜尋的幣種直接消失
+                if (IS_BREAKOUT_ONLY && !isBreakingOut && !isPinned && !isSearching) shouldShow = false;
 
                 if (shouldShow) {
                     results.push({ 
                         s, slope, fNow, volRatio, isPinned, isTriggered, isFundingDanger, isBreakingOut,
-                        rawScore: Math.round(avgDrv).toLocaleString(),
+                        rawScoreStr: Math.round(avgDrv).toLocaleString(),
                         price: pNow, denseZone
                     });
                 }
 
                 if (isTriggered && !stats[s].logged) {
-                    addLog(`🔥 爆發點: ${s.replace('USDT','')} | Raw: ${Math.round(avgDrv).toLocaleString()}`, "text-purple-400 font-bold");
+                    addLog(`🔥 爆發點: ${s.replace('USDT','')} | FR: ${(fNow*100).toFixed(3)}%`, "text-purple-400 font-bold");
                     stats[s].logged = true;
                 } else if (!isTriggered) { stats[s].logged = false; }
 
@@ -156,7 +155,12 @@
             });
 
             const list = document.getElementById('list'); list.innerHTML = '';
-            results.sort((a,b) => b.isTriggered - a.isTriggered || b.isPinned - a.isPinned);
+            results.sort((a,b) => {
+                const rankA = (a.isTriggered ? 3 : (a.isPinned ? 2 : (a.isFundingDanger ? 1 : 0)));
+                const rankB = (b.isTriggered ? 3 : (b.isPinned ? 2 : (b.isFundingDanger ? 1 : 0)));
+                if (rankA !== rankB) return rankB - rankA;
+                return Math.abs(b.fNow) - Math.abs(a.fNow);
+            });
             
             results.slice(0, 24).forEach(item => {
                 const div = document.createElement('div');
@@ -167,10 +171,10 @@
                         <div>
                             <div class="text-white font-black text-xl">${item.isPinned ? '📌 ' : ''}${item.s.replace('USDT','')}</div>
                             <div class="text-[10px] ${item.slope < 0 ? 'text-red-500' : 'text-zinc-500'} font-bold">SLP: ${(item.slope*100).toFixed(1)}% | FR: ${(item.fNow*100).toFixed(3)}%</div>
-                            <div class="text-[8px] text-zinc-600 font-bold mt-1">ZONE: ${item.denseZone.toFixed(4)} ${item.isBreakingOut ? '▲' : '▼'}</div>
+                            <div class="text-[8px] text-zinc-600 font-bold mt-1 uppercase">Zone: ${item.denseZone.toFixed(4)} ${item.isBreakingOut ? '<span class="text-green-500">▲ Break</span>' : '<span class="text-red-500">▼ Below</span>'}</div>
                         </div>
                         <div class="text-right">
-                            <div class="score-val">${item.rawScore}</div>
+                            <div class="score-val">${item.rawScoreStr}</div>
                             <div class="text-[8px] text-zinc-600 font-black">VACUUM</div>
                         </div>
                     </div>
@@ -190,6 +194,7 @@
             let v = parseFloat(e.target.value);
             FILTER[key] = v / scale;
             document.getElementById(valId).innerText = (key==='VOL_RATIO'?(v/10).toFixed(1)+'x':v+(key==='DRV_SCORE'?'':'%'));
+            update(); // 即時重繪，拉動滑桿垃圾立刻消失
         };
     };
     bindFilter('slp_range', 'slp_val', 'SLP', 100);
