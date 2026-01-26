@@ -1,26 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ DRIVE SNIPER V5.1.4 - 實戰區間版</title>
+    <title>⚡ DRIVE SNIPER V5.2.0 - 籌碼突破版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
         .card { background: #0a0a0a; border: 1px solid #1a3a1a; cursor: pointer; transition: all 0.2s; }
-        .pinned { border: 2px solid #3b82f6 !important; background: #081221 !important; }
-        /* 三個條件全過，觸發紫色爆發燈 */
         .hunt-trigger { border: 2px solid #a855f7 !important; background: #1e1b4b !important; animation: blink 0.8s infinite; }
-        /* 資費正負 0.05 警告燈 (紅框) */
+        .pinned { border: 2px solid #3b82f6 !important; background: #081221 !important; }
         .funding-danger { border-color: #ef4444 !important; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
         .score-val { font-size: 1.4rem; font-weight: 900; color: #eab308; line-height: 1; }
+        /* 開關樣式 */
+        .toggle-btn { transition: all 0.3s; border: 1px solid #333; }
+        .toggle-active { background: #ef4444 !important; color: white !important; box-shadow: 0 0 15px #ef4444; border-color: #fff; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
     <div class="flex-1 flex flex-col p-4 overflow-hidden">
         <div class="bg-zinc-900 p-4 rounded-xl mb-4 border border-white/10 shadow-2xl">
             <div class="flex justify-between items-center mb-4">
-                <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.1.4 <span class="text-[10px] bg-blue-900 text-white px-2 py-0.5 rounded ml-2">1M Window</span></h1>
-                <input type="text" id="searchInput" placeholder="搜尋幣名..." class="bg-black border border-zinc-800 px-3 py-1 rounded text-sm text-blue-400 outline-none w-48">
+                <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.2.0</h1>
+                <div class="flex gap-4 items-center">
+                    <button id="breakoutToggle" onclick="toggleBreakout()" class="toggle-btn bg-black text-[10px] px-4 py-2 rounded-lg font-black uppercase text-zinc-500">
+                        ⚡ Breakout Only (站上密集區)
+                    </button>
+                    <input type="text" id="searchInput" placeholder="搜尋幣名..." class="bg-black border border-zinc-800 px-3 py-1 rounded text-sm text-blue-400 outline-none w-40">
+                </div>
             </div>
             <div class="grid grid-cols-3 gap-4 text-[10px] uppercase font-bold">
                 <div class="space-y-1">
@@ -28,8 +34,8 @@
                     <input type="range" id="slp_range" min="-80" max="0" value="-5" class="w-full">
                 </div>
                 <div class="space-y-1">
-                    <div class="flex justify-between text-yellow-500"><span>💯 Vacuum (Score)</span><span id="drv_val">60</span></div>
-                    <input type="range" id="drv_range" min="0" max="100" value="60" class="w-full">
+                    <div class="flex justify-between text-yellow-500"><span>💯 Vacuum (90+)</span><span id="drv_val">90</span></div>
+                    <input type="range" id="drv_range" min="0" max="100" value="90" class="w-full">
                 </div>
                 <div class="space-y-1">
                     <div class="flex justify-between text-blue-400"><span>⚡ Vol Boost</span><span id="vol_val">1.2x</span></div>
@@ -41,13 +47,21 @@
     </div>
 
     <div class="w-80 bg-zinc-950 border-l border-zinc-800 flex flex-col p-4">
-        <div class="font-black text-xs text-zinc-500 uppercase mb-4 border-b border-zinc-800 pb-2">System Logs (1m 區間)</div>
+        <div id="status" class="text-[10px] mb-2 text-blue-500 font-bold uppercase">System Init...</div>
+        <div class="font-black text-xs text-zinc-500 uppercase mb-4 border-b border-zinc-800 pb-2">System Logs</div>
         <div id="logs" class="flex-1 overflow-y-auto space-y-2 text-[10px] font-mono"></div>
     </div>
 
 <script>
     const EXCLUDE = ['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT','BNBUSDT','BNXUSDT'];
-    let stats = {}, pinned = new Set(), FILTER = { SLP: -0.05, DRV_SCORE: 60, VOL_RATIO: 1.2 };
+    let stats = {}, pinned = new Set(), FILTER = { SLP: -0.05, DRV_SCORE: 90, VOL_RATIO: 1.2 };
+    let IS_BREAKOUT_ONLY = false;
+
+    function toggleBreakout() {
+        IS_BREAKOUT_ONLY = !IS_BREAKOUT_ONLY;
+        document.getElementById('breakoutToggle').classList.toggle('toggle-active');
+        update();
+    }
 
     function addLog(msg, color="text-zinc-500") {
         const logs = document.getElementById('logs');
@@ -81,45 +95,60 @@
                 if (!ticker) return;
 
                 const fNow = parseFloat(c.lastFundingRate), pNow = parseFloat(ticker.lastPrice), vNow = parseFloat(ticker.quoteVolume);
-                
+                const pHigh = parseFloat(ticker.highPrice), pLow = parseFloat(ticker.lowPrice);
+
                 if (!stats[s]) { 
-                    stats[s] = { p: pNow, v: vNow, vHist: [vNow], frHist: [fNow], drvHist: [], start: Date.now() }; 
+                    stats[s] = { p: pNow, v: vNow, vHist: [], frHist: [], drvHist: [], start: Date.now() }; 
                     return; 
                 }
 
-                // 數據推入 1 分鐘緩衝區 (30 個樣本)
-                stats[s].vHist.push(vNow); if (stats[s].vHist.length > 30) stats[s].vHist.shift();
-                stats[s].frHist.push(fNow); if (stats[s].frHist.length > 30) stats[s].frHist.shift();
+                // 更新數據 (5秒一次)
+                stats[s].vHist.push(vNow); if (stats[s].vHist.length > 12) stats[s].vHist.shift(); // 12 * 5s = 1min
+                stats[s].frHist.push(fNow); if (stats[s].frHist.length > 12) stats[s].frHist.shift();
                 
-                // 計算 1 分鐘區間數據
+                // 區間邏輯檢查: 必須蒐集滿 1 分鐘 (12個樣本) 才開始判斷
+                if (stats[s].frHist.length < 12) {
+                    document.getElementById('status').innerText = `Syncing... (${stats[s].frHist.length}/12)`;
+                    return;
+                }
+                document.getElementById('status').innerText = `Live Monitoring`;
+
                 const avgVol = stats[s].vHist.reduce((a,b)=>a+b,0) / stats[s].vHist.length;
                 const volRatio = vNow / (avgVol || 1);
                 const slope = (fNow - stats[s].frHist[0]) / Math.abs(stats[s].frHist[0] || 0.0001);
-                
                 const vDelta = Math.abs(vNow - stats[s].v);
                 const pDelta = Math.abs(pNow - stats[s].p) / stats[s].p;
                 const instDrv = vDelta > 0 ? (pDelta / vDelta) * 100000000 : 0;
-                stats[s].drvHist.push(instDrv); if (stats[s].drvHist.length > 30) stats[s].drvHist.shift();
+                stats[s].drvHist.push(instDrv); if (stats[s].drvHist.length > 12) stats[s].drvHist.shift();
                 const avgDrv = stats[s].drvHist.reduce((a,b)=>a+b,0) / stats[s].drvHist.length;
                 
                 const filterScore = calculateScore(avgDrv);
                 const isPinned = pinned.has(s);
                 const isSearching = keyword && s.includes(keyword);
                 
-                // 核心判定邏輯
-                const isTriggered = (slope <= FILTER.SLP && filterScore >= FILTER.DRV_SCORE && volRatio >= FILTER.VOL_RATIO);
-                const isFundingDanger = Math.abs(fNow) >= 0.0005; // 0.05% 資費門檻
+                // 站上密集區判斷: 高低點平均
+                const denseZone = (pHigh + pLow) / 2;
+                const isBreakingOut = pNow > denseZone;
 
-                if (isTriggered || isPinned || isSearching || filterScore > 20) {
+                // 觸發警報
+                const isTriggered = (slope <= FILTER.SLP && filterScore >= FILTER.DRV_SCORE && volRatio >= FILTER.VOL_RATIO);
+                const isFundingDanger = Math.abs(fNow) >= 0.0005;
+
+                // 總過濾邏輯
+                let shouldShow = isTriggered || isPinned || isSearching || isFundingDanger;
+                if (IS_BREAKOUT_ONLY && !isBreakingOut) shouldShow = false;
+                if (isPinned || isSearching) shouldShow = true; // 搜尋與釘選擁有最高優先權
+
+                if (shouldShow) {
                     results.push({ 
-                        s, slope, fNow, volRatio, isPinned, isTriggered, isFundingDanger,
+                        s, slope, fNow, volRatio, isPinned, isTriggered, isFundingDanger, isBreakingOut,
                         rawScore: Math.round(avgDrv).toLocaleString(),
-                        price: pNow, sec: Math.floor((Date.now()-stats[s].start)/1000) 
+                        price: pNow, denseZone
                     });
                 }
 
                 if (isTriggered && !stats[s].logged) {
-                    addLog(`🔥 發動警報: ${s.replace('USDT','')} | Score: ${Math.round(avgDrv).toLocaleString()} | Vol: ${volRatio.toFixed(1)}x`, "text-purple-400 font-bold");
+                    addLog(`🔥 爆發點: ${s.replace('USDT','')} | Raw: ${Math.round(avgDrv).toLocaleString()}`, "text-purple-400 font-bold");
                     stats[s].logged = true;
                 } else if (!isTriggered) { stats[s].logged = false; }
 
@@ -127,7 +156,7 @@
             });
 
             const list = document.getElementById('list'); list.innerHTML = '';
-            results.sort((a,b) => b.isTriggered - a.isTriggered || b.isPinned - a.isPinned || b.isFundingDanger - a.isFundingDanger);
+            results.sort((a,b) => b.isTriggered - a.isTriggered || b.isPinned - a.isPinned);
             
             results.slice(0, 24).forEach(item => {
                 const div = document.createElement('div');
@@ -138,10 +167,11 @@
                         <div>
                             <div class="text-white font-black text-xl">${item.isPinned ? '📌 ' : ''}${item.s.replace('USDT','')}</div>
                             <div class="text-[10px] ${item.slope < 0 ? 'text-red-500' : 'text-zinc-500'} font-bold">SLP: ${(item.slope*100).toFixed(1)}% | FR: ${(item.fNow*100).toFixed(3)}%</div>
+                            <div class="text-[8px] text-zinc-600 font-bold mt-1">ZONE: ${item.denseZone.toFixed(4)} ${item.isBreakingOut ? '▲' : '▼'}</div>
                         </div>
                         <div class="text-right">
                             <div class="score-val">${item.rawScore}</div>
-                            <div class="text-[8px] text-zinc-600 font-black">RAW DRIVE</div>
+                            <div class="text-[8px] text-zinc-600 font-black">VACUUM</div>
                         </div>
                     </div>
                     <div class="mt-3 flex items-center space-x-2">
@@ -155,20 +185,18 @@
         } catch (e) { console.error(e); }
     }
 
-    // 綁定滑桿，拉動時立即顯示
     const bindFilter = (id, valId, key, scale) => {
         document.getElementById(id).oninput = (e) => {
             let v = parseFloat(e.target.value);
             FILTER[key] = v / scale;
             document.getElementById(valId).innerText = (key==='VOL_RATIO'?(v/10).toFixed(1)+'x':v+(key==='DRV_SCORE'?'':'%'));
-            // 拉動後不重抓數據，直接更新畫面判斷
         };
     };
     bindFilter('slp_range', 'slp_val', 'SLP', 100);
     bindFilter('drv_range', 'drv_val', 'DRV_SCORE', 1);
     bindFilter('vol_range', 'vol_val', 'VOL_RATIO', 10);
 
-    setInterval(update, 2000); // 2秒更新一次，區間固定為1分鐘
+    setInterval(update, 5000); 
     update();
 </script>
 </body>
