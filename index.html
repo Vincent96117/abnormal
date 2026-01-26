@@ -1,182 +1,141 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ DRIVE SNIPER V2.8 - 強制連動版</title>
+    <title>⚡ DRIVE SNIPER V3.1 - 深度平滑版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
-        .card { background: #0a0a0a; border: 1px solid #1a3a1a; transition: all 0.3s; }
+        .card { background: #0a0a0a; border: 1px solid #1a3a1a; transition: all 0.5s ease; position: relative; }
         .pinned-card { border: 2px solid #00ff00 !important; background: #0f1a0f !important; }
         .log-container { background: #050505; border-left: 1px solid #1a3a1a; height: 100vh; overflow-y: auto; }
-        .log-entry { border-bottom: 1px dashed #222; padding: 8px; font-size: 11px; cursor: pointer; }
-        input[type=range] { accent-color: #0f0; cursor: pointer; }
+        .log-entry { border-bottom: 1px dashed #222; padding: 10px; font-size: 11px; }
+        input[type=range] { accent-color: #0f0; }
+        .duration-tag { font-size: 10px; background: #065f46; color: #6ee7b7; padding: 1px 8px; border-radius: 4px; font-weight: bold; }
+        /* 下榜倒數閃爍效果 (最後10秒) */
+        .dying { animation: pulse-red 1s infinite; }
+        @keyframes pulse-red { 0% { border-color: #1a3a1a; } 50% { border-color: #7f1d1d; } 100% { border-color: #1a3a1a; } }
     </style>
 </head>
 <body class="flex overflow-hidden">
     <div class="flex-1 p-5 overflow-y-auto h-screen">
-        <div class="control-panel bg-zinc-900 p-4 mb-6 rounded-lg sticky top-0 z-50 border border-green-900/30">
+        <div class="control-panel bg-zinc-900 p-4 mb-6 rounded-lg sticky top-0 z-50 border border-green-900/30 shadow-2xl">
             <div class="flex justify-between items-center mb-4">
                 <div>
-                    <h1 class="text-xl font-black text-green-500 italic uppercase">⚡ Sniper V2.8</h1>
-                    <div id="counter" class="text-[10px] text-gray-500 mt-1">掃描中...</div>
+                    <h1 class="text-xl font-black text-green-500 italic uppercase">⚡ Sniper V3.1</h1>
+                    <p class="text-[9px] text-gray-500 font-mono tracking-widest">DRIVE WINDOW: 30 SAMPLES (1.5 MINS)</p>
                 </div>
-                <div class="flex gap-2">
-                    <input type="text" id="searchInput" placeholder="直接搜幣名 (無視過濾)..." class="bg-black border border-zinc-700 px-3 py-1 rounded text-xs text-green-400 outline-none w-56">
-                </div>
+                <input type="text" id="searchInput" placeholder="搜尋幣名 (強制定位)..." class="bg-black border border-zinc-700 px-3 py-1 rounded text-xs text-green-400 outline-none w-56 focus:border-green-500">
             </div>
-            
             <div class="grid grid-cols-3 gap-4 text-[10px]">
-                <div class="space-y-1">
-                    <div class="flex justify-between text-red-500 font-bold"><span>📉 Slope Limit (資費斜率)</span><span id="slp_val">-5.0%</span></div>
-                    <input type="range" id="slp_range" min="-80" max="0" value="-5" class="w-full">
-                </div>
-                <div class="space-y-1">
-                    <div class="flex justify-between text-yellow-500 font-bold"><span>⚡ Drive Limit (真空度)</span><span id="drv_val">1000</span></div>
-                    <input type="range" id="drv_range" min="0" max="20000" value="1000" step="500" class="w-full">
-                </div>
-                <div class="space-y-1">
-                    <div class="flex justify-between text-blue-400 font-bold"><span>🔥 MOM (波動%)</span><span id="mom_val">0.1%</span></div>
-                    <input type="range" id="mom_range" min="0" max="50" value="1" class="w-full">
-                </div>
+                <div class="space-y-1"><div class="flex justify-between text-red-500 font-bold"><span>📉 Slope Limit</span><span id="slp_val">-5.0%</span></div><input type="range" id="slp_range" min="-80" max="0" value="-5" class="w-full"></div>
+                <div class="space-y-1"><div class="flex justify-between text-yellow-500 font-bold"><span>⚡ Drive (90s Avg)</span><span id="drv_val">3000</span></div><input type="range" id="drv_range" min="0" max="20000" value="3000" step="500" class="w-full"></div>
+                <div class="space-y-1"><div class="flex justify-between text-blue-400 font-bold"><span>🔥 Vol MOM</span><span id="mom_val">0.1%</span></div><input type="range" id="mom_range" min="0" max="50" value="1" class="w-full"></div>
             </div>
         </div>
         <div id="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
     </div>
 
-    <div class="w-80 log-container p-3 text-xs">
-        <div class="text-gray-500 mb-4 border-b border-gray-800 pb-2 uppercase font-black">📋 Detection Log</div>
+    <div class="w-80 log-container p-3">
+        <div class="text-xs font-bold text-gray-500 mb-4 border-b border-gray-800 pb-2 uppercase italic tracking-tighter">📋 Persistence Detection Log</div>
         <div id="log-list" class="flex flex-col-reverse"></div>
     </div>
 
     <script>
         const EXCLUDE = ['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT','BNBUSDT'];
-        let stats = {}, boardState = {}, pinnedList = JSON.parse(localStorage.getItem('sniper_pinned')) || [];
-        
-        // 全域過濾器參數
-        let FILTER = { SLP: -0.05, DRV: 1000, MOM: 0.001 };
-
-        // 強制監聽所有拉桿
-        const updateFilters = () => {
-            const sVal = parseFloat(document.getElementById('slp_range').value);
-            const dVal = parseFloat(document.getElementById('drv_range').value);
-            const mVal = parseFloat(document.getElementById('mom_range').value);
-            
-            FILTER.SLP = sVal / 100;
-            FILTER.DRV = dVal;
-            FILTER.MOM = mVal / 1000;
-
-            document.getElementById('slp_val').innerText = sVal.toFixed(1) + '%';
-            document.getElementById('drv_val').innerText = dVal.toFixed(0);
-            document.getElementById('mom_val').innerText = (mVal/10).toFixed(1) + '%';
-            
-            render(); // 拉動時立即重新渲染已緩存數據
-        };
-
-        document.getElementById('slp_range').addEventListener('input', updateFilters);
-        document.getElementById('drv_range').addEventListener('input', updateFilters);
-        document.getElementById('mom_range').addEventListener('input', updateFilters);
-        document.getElementById('searchInput').addEventListener('input', () => render());
+        let stats = {}, tracker = {}, pinnedList = JSON.parse(localStorage.getItem('sniper_pinned')) || [];
+        let FILTER = { SLP: -0.05, DRV: 3000, MOM: 0.001 };
 
         function addLog(s, drv, slp) {
             const logList = document.getElementById('log-list');
             const time = new Date().toLocaleTimeString('zh-TW', { hour12: false });
             const entry = document.createElement('div');
-            entry.className = 'log-entry py-2 border-b border-zinc-900 hover:bg-zinc-900';
-            entry.innerHTML = `<div class="flex justify-between"><b class="text-green-400">${s}</b><span class="text-gray-600 text-[9px]">${time}</span></div>
-                               <div class="text-gray-500 text-[9px]">D:${drv.toFixed(0)} | S:${(slp*100).toFixed(1)}%</div>`;
+            entry.className = 'log-entry';
+            entry.innerHTML = `<div class="flex justify-between items-center"><b class="text-green-400 text-sm">${s.replace('USDT','')}</b><span class="text-gray-600 text-[10px]">${time}</span></div>
+                               <div class="text-[9px] text-gray-500 mt-1">趨勢確立上榜 (90s): D:${drv.toFixed(0)} | S:${(slp*100).toFixed(1)}%</div>`;
             logList.appendChild(entry);
             if (logList.childElementCount > 50) logList.firstChild.remove();
         }
 
-        let cachedResults = []; // 快取最新一次數據，方便拉桿時秒級響應
-
-        async function fetchData() {
+        async function update() {
             try {
                 const [fRes, oRes] = await Promise.all([
                     fetch('https://fapi.binance.com/fapi/v1/premiumIndex'),
                     fetch('https://fapi.binance.com/fapi/v1/ticker/24hr')
                 ]);
                 const fData = await fRes.json(), oData = await oRes.json();
-                const now = Date.now();
-                
-                cachedResults = fData.filter(c => c.symbol.endsWith('USDT') && !EXCLUDE.includes(c.symbol)).map(c => {
+                const now = Date.now(), keyword = document.getElementById('searchInput').value.toUpperCase();
+                let results = [];
+
+                fData.filter(c => c.symbol.endsWith('USDT') && !EXCLUDE.includes(c.symbol)).forEach(c => {
                     const s = c.symbol;
                     const ticker = oData.find(t => t.symbol === s);
-                    if (!ticker) return null;
+                    if (!ticker) return;
 
                     const fNow = parseFloat(c.lastFundingRate), pNow = parseFloat(ticker.lastPrice), vNow = parseFloat(ticker.quoteVolume);
-                    if (!stats[s]) { stats[s] = { p: pNow, v: vNow, frHist: [fNow], drvHist: [] }; return null; }
+                    if (!stats[s]) { stats[s] = { p: pNow, v: vNow, frHist: [fNow], drvHist: [] }; return; }
 
                     stats[s].frHist.push(fNow); if (stats[s].frHist.length > 30) stats[s].frHist.shift();
                     const slope = (fNow - stats[s].frHist[0]) / Math.abs(stats[s].frHist[0] || 0.0001);
-                    const pMove = Math.abs((pNow - stats[s].p) / stats[s].p) * 100;
                     const vMove = Math.abs((vNow - stats[s].v) / stats[s].v) * 100;
+                    const pMove = Math.abs((pNow - stats[s].p) / stats[s].p) * 100;
                     const instDrv = vMove > 0 ? (pMove / (vMove + 0.000001)) * 100 : 0;
-                    stats[s].drvHist.push(instDrv); if (stats[s].drvHist.length > 50) stats[s].drvHist.shift();
-                    const avgDrv = stats[s].drvHist.reduce((a,b)=>a+b,0) / stats[s].drvHist.length;
                     
+                    // 這裡改為 30 筆平均
+                    stats[s].drvHist.push(instDrv); if (stats[s].drvHist.length > 30) stats[s].drvHist.shift();
+                    const avgDrv = stats[s].drvHist.reduce((a,b)=>a+b,0) / stats[s].drvHist.length;
                     stats[s].p = pNow; stats[s].v = vNow;
-                    return { s, slope, avgDrv, vMove, price: pNow };
-                }).filter(i => i !== null);
-                
-                render();
-            } catch (e) { console.error("Fetch Error:", e); }
-        }
 
-        function render() {
-            const list = document.getElementById('list');
-            const keyword = document.getElementById('searchInput').value.toUpperCase();
-            const now = Date.now();
-            let displayList = [];
+                    const isHitting = (slope <= FILTER.SLP && avgDrv >= FILTER.DRV && vMove >= FILTER.MOM);
+                    if (!tracker[s]) tracker[s] = { count: 0, lastHit: 0, startTime: 0, active: false };
 
-            cachedResults.forEach(item => {
-                const isPinned = pinnedList.includes(item.s);
-                const isMatched = keyword && item.s.includes(keyword);
-                const meetsCriteria = (item.slope <= FILTER.SLP && item.avgDrv >= FILTER.DRV && item.vMove >= FILTER.MOM);
+                    if (isHitting) {
+                        tracker[s].count++; tracker[s].lastHit = now;
+                        if (tracker[s].count >= 3 && !tracker[s].active) {
+                            tracker[s].active = true; tracker[s].startTime = now;
+                            addLog(s, avgDrv, slope);
+                        }
+                    } else { tracker[s].count = 0; }
 
-                // 穩定性日誌邏輯
-                if (meetsCriteria) {
-                    if (!boardState[item.s]) {
-                        boardState[item.s] = now;
-                        addLog(item.s, item.avgDrv, item.slope);
+                    const bufferTime = 30000; // 30秒緩衝
+                    const isWithinBuffer = tracker[s].active && (now - tracker[s].lastHit < bufferTime);
+                    if (isPinned = pinnedList.includes(s) || (keyword && s.includes(keyword)) || isWithinBuffer) {
+                        const timeLeft = tracker[s].active ? Math.max(0, bufferTime - (now - tracker[s].lastHit)) : 0;
+                        results.push({ s, slope, avgDrv, price: pNow, isPinned, isMatched: keyword && s.includes(keyword), 
+                                       activeTime: tracker[s].active ? Math.floor((now - tracker[s].startTime)/1000) : 0,
+                                       isDying: tracker[s].active && timeLeft < 10000 });
                     }
-                } else {
-                    delete boardState[item.s];
-                }
+                });
 
-                if (isPinned || isMatched || meetsCriteria) {
-                    displayList.push({ ...item, isPinned, isMatched });
-                }
-            });
-
-            document.getElementById('counter').innerText = `全場符合過濾：${displayList.filter(i => !i.isMatched && !i.isPinned).length} 隻`;
-
-            list.innerHTML = '';
-            displayList.sort((a,b) => (b.isMatched - a.isMatched) || (b.isPinned - a.isPinned) || (b.avgDrv - a.avgDrv)).forEach(item => {
-                const div = document.createElement('div');
-                div.className = `card p-3 rounded ${item.isPinned ? 'pinned-card' : ''} ${item.isMatched ? 'border-blue-500 shadow-[0_0_10px_rgba(0,100,255,0.3)]' : ''}`;
-                div.innerHTML = `
-                    <div class="flex justify-between font-bold text-sm">
-                        <span class="${item.isMatched ? 'text-blue-400' : 'text-white'}">${item.s.replace('USDT','')}</span>
-                        <span class="cursor-pointer" onclick="event.stopPropagation(); togglePin('${item.s}')">${item.isPinned?'📍':'📌'}</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-1 mt-2 text-[10px]">
-                        <div class="text-red-500 font-bold uppercase">Slope: ${(item.slope*100).toFixed(1)}%</div>
-                        <div class="text-yellow-500 font-bold uppercase">Drive: ${item.avgDrv.toFixed(0)}</div>
-                    </div>`;
-                list.appendChild(div);
-            });
+                const list = document.getElementById('list'); list.innerHTML = '';
+                results.sort((a,b) => (b.isMatched-a.isMatched) || (b.isPinned-a.isPinned) || (b.activeTime-a.activeTime)).forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = `card p-3 rounded ${item.isPinned ? 'pinned-card' : ''} ${item.isDying ? 'dying' : ''}`;
+                    div.innerHTML = `
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-bold text-white text-base">${item.s.replace('USDT','')}</span>
+                            ${item.activeTime > 0 ? `<span class="duration-tag">⏱️ ${item.activeTime}s</span>` : ''}
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-[10px] font-mono">
+                            <div class="text-red-500 font-bold">SLP: ${(item.slope*100).toFixed(1)}%</div>
+                            <div class="text-yellow-500 font-bold">DRV: ${item.avgDrv.toFixed(0)}</div>
+                        </div>`;
+                    list.appendChild(div);
+                });
+            } catch (e) { console.error(e); }
         }
 
-        window.togglePin = (s) => {
-            pinnedList = pinnedList.includes(s) ? pinnedList.filter(i => i !== s) : [...pinnedList, s];
-            localStorage.setItem('sniper_pinned', JSON.stringify(pinnedList));
-            render();
+        const bindFilter = (id, valId, key, scale) => {
+            document.getElementById(id).oninput = (e) => {
+                let v = parseFloat(e.target.value);
+                FILTER[key] = v / scale;
+                document.getElementById(valId).innerText = (key==='DRV'?v:v.toFixed(1)) + (key==='DRV'?'':'%');
+            };
         };
+        bindFilter('slp_range', 'slp_val', 'SLP', 100);
+        bindFilter('drv_range', 'drv_val', 'DRV', 1);
+        bindFilter('mom_range', 'mom_val', 'MOM', 1000);
 
-        setInterval(fetchData, 3000);
-        fetchData();
-        updateFilters(); // 初始化拉桿數值
+        setInterval(update, 3000); update();
     </script>
 </body>
 </html>
