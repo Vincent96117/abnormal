@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ DRIVE SNIPER V5.2.6 - 價格透明版</title>
+    <title>⚡ DRIVE SNIPER V5.2.7 - 終極穩定版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
@@ -20,12 +20,12 @@
         <div class="bg-zinc-900 p-4 rounded-xl mb-4 border border-white/10 shadow-2xl">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex flex-col">
-                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.2.6</h1>
+                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.2.7</h1>
                     <div id="status" class="text-[9px] text-zinc-500 font-bold uppercase mt-1">Ready</div>
                 </div>
                 <div class="flex gap-4 items-center">
                     <button id="breakoutToggle" onclick="toggleBreakout()" class="toggle-btn bg-black text-[10px] px-4 py-2 rounded-lg font-black uppercase text-zinc-400">
-                        ⚡ Breakout Only (站上密集區)
+                        ⚡ Breakout Only
                     </button>
                     <input type="text" id="searchInput" placeholder="搜尋幣名..." class="bg-black border border-zinc-800 px-3 py-1 rounded text-sm text-blue-400 outline-none w-40">
                 </div>
@@ -48,7 +48,7 @@
         <div id="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto pr-2"></div>
     </div>
     <div class="w-80 bg-zinc-950 border-l border-zinc-800 flex flex-col p-4">
-        <div class="font-black text-xs text-zinc-500 uppercase mb-4 border-b border-zinc-800 pb-2">Real-time Logs</div>
+        <div class="font-black text-xs text-zinc-500 uppercase mb-4 border-b border-zinc-800 pb-2">Sniper Logs</div>
         <div id="logs" class="flex-1 overflow-y-auto space-y-2 text-[10px] font-mono"></div>
     </div>
 
@@ -83,90 +83,75 @@
         isUpdating = true;
 
         try {
-            // 階段 1：抓資費 (輕量級)
+            // 穩定抓取模式：每輪只發兩次請求
             const fRes = await fetch('https://fapi.binance.com/fapi/v1/premiumIndex');
+            if (fRes.status === 418) { addLog("⚠️ 觸發 418，請休息 5 分鐘", "text-red-500"); isUpdating = false; return; }
             const fData = await fRes.json();
             
+            // 強迫休息 2 秒，避免被當成機器人
+            await new Promise(r => setTimeout(r, 2000));
+
+            const tRes = await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr');
+            if (tRes.status === 418) { addLog("⚠️ 觸發 418，請休息 5 分鐘", "text-red-500"); isUpdating = false; return; }
+            const tData = await tRes.json();
+
+            let results = [];
             const keyword = document.getElementById('searchInput').value.toUpperCase();
-            
-            // 篩選出需要個別抓取數據的標的 (資費高、已釘選、或正在搜尋)
-            const candidates = fData.filter(c => {
+
+            fData.filter(c => c.symbol.endsWith('USDT') && !EXCLUDE.includes(c.symbol)).forEach(c => {
                 const s = c.symbol;
-                if (!s.endsWith('USDT') || EXCLUDE.includes(s)) return false;
-                return Math.abs(parseFloat(c.lastFundingRate)) >= 0.0005 || pinned.has(s) || (keyword && s.includes(keyword));
+                const ticker = tData.find(t => t.symbol === s);
+                if (!ticker) return;
+
+                const fNow = parseFloat(c.lastFundingRate), pNow = parseFloat(ticker.lastPrice), vNow = parseFloat(ticker.quoteVolume);
+                const zonePrice = (parseFloat(ticker.highPrice) + parseFloat(ticker.lowPrice)) / 2;
+
+                if (!stats[s]) { 
+                    stats[s] = { p: pNow, v: vNow, vHist: [], frHist: [], drvHist: [] }; 
+                    return; 
+                }
+
+                stats[s].vHist.push(vNow); if (stats[s].vHist.length > 12) stats[s].vHist.shift(); 
+                stats[s].frHist.push(fNow); if (stats[s].frHist.length > 12) stats[s].frHist.shift();
+                
+                if (stats[s].frHist.length < 12) {
+                    document.getElementById('status').innerText = `Syncing... (${stats[s].frHist.length}/12)`;
+                    return;
+                }
+                document.getElementById('status').innerText = `Stable Monitoring`;
+
+                const avgVol = stats[s].vHist.reduce((a,b)=>a+b,0) / stats[s].vHist.length;
+                const volRatio = vNow / (avgVol || 1);
+                const slope = (fNow - stats[s].frHist[0]) / Math.abs(stats[s].frHist[0] || 0.0001);
+                
+                const vDelta = Math.abs(vNow - stats[s].v);
+                const pDelta = Math.abs(pNow - stats[s].p) / stats[s].p;
+                const instDrv = vDelta > 0 ? (pDelta / vDelta) * 100000000 : 0;
+                stats[s].drvHist.push(instDrv); if (stats[s].drvHist.length > 12) stats[s].drvHist.shift();
+                const avgDrv = stats[s].drvHist.reduce((a,b)=>a+b,0) / stats[s].drvHist.length;
+                
+                const filterScore = calculateScore(avgDrv);
+                const isTriggered = (slope <= FILTER.SLP && filterScore >= FILTER.DRV_SCORE && volRatio >= FILTER.VOL_RATIO);
+                const isFundingDanger = Math.abs(fNow) >= 0.0005 && filterScore > 40;
+                const isBreakingOut = pNow > zonePrice;
+
+                let shouldShow = isTriggered || pinned.has(s) || (keyword && s.includes(keyword)) || isFundingDanger;
+                if (IS_BREAKOUT_ONLY && !isBreakingOut && !pinned.has(s)) shouldShow = false;
+
+                if (shouldShow) {
+                    results.push({ s, slope, fNow, volRatio, filterScore, rawValueStr: Math.round(avgDrv).toLocaleString(), livePrice: pNow, zonePrice, isTriggered, isFundingDanger, isBreakingOut });
+                }
+
+                if (isTriggered && !stats[s].logged) {
+                    addLog(`🔥 爆發: ${s.replace('USDT','')}`, "text-purple-400 font-bold");
+                    stats[s].logged = true;
+                } else if (!isTriggered) { stats[s].logged = false; }
+
+                stats[s].p = pNow; stats[s].v = vNow;
             });
 
-            const displayResults = [];
-
-            // 階段 2：精確打擊 (個別抓取詳細數據)
-            for (let i = 0; i < Math.min(candidates.length, 30); i++) {
-                const c = candidates[i];
-                const s = c.symbol;
-
-                try {
-                    const tRes = await fetch(`https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=${s}`);
-                    const ticker = await tRes.json();
-
-                    const fNow = parseFloat(c.lastFundingRate);
-                    const pNow = parseFloat(ticker.lastPrice);
-                    const vNow = parseFloat(ticker.quoteVolume);
-                    const pHigh = parseFloat(ticker.highPrice);
-                    const pLow = parseFloat(ticker.lowPrice);
-                    const zonePrice = (pHigh + pLow) / 2; // 平均成交密集區價格
-
-                    if (!stats[s]) {
-                        stats[s] = { p: pNow, v: vNow, vHist: [], frHist: [], drvHist: [] };
-                        continue;
-                    }
-
-                    stats[s].vHist.push(vNow); if (stats[s].vHist.length > 12) stats[s].vHist.shift();
-                    stats[s].frHist.push(fNow); if (stats[s].frHist.length > 12) stats[s].frHist.shift();
-
-                    if (stats[s].frHist.length < 12) continue;
-
-                    const avgVol = stats[s].vHist.reduce((a,b)=>a+b,0) / stats[s].vHist.length;
-                    const volRatio = vNow / (avgVol || 1);
-                    const slope = (fNow - stats[s].frHist[0]) / Math.abs(stats[s].frHist[0] || 0.0001);
-
-                    const vDelta = Math.abs(vNow - stats[s].v);
-                    const pDelta = Math.abs(pNow - stats[s].p) / stats[s].p;
-                    const instDrv = vDelta > 0 ? (pDelta / vDelta) * 100000000 : 0;
-                    stats[s].drvHist.push(instDrv); if (stats[s].drvHist.length > 12) stats[s].drvHist.shift();
-                    const avgDrv = stats[s].drvHist.reduce((a,b)=>a+b,0) / stats[s].drvHist.length;
-
-                    const filterScore = calculateScore(avgDrv);
-                    const isTriggered = (slope <= FILTER.SLP && filterScore >= FILTER.DRV_SCORE && volRatio >= FILTER.VOL_RATIO);
-                    const isFundingDanger = Math.abs(fNow) >= 0.0005 && filterScore > 40;
-                    const isBreakingOut = pNow > zonePrice;
-
-                    let shouldShow = isTriggered || pinned.has(s) || (keyword && s.includes(keyword)) || isFundingDanger;
-                    if (IS_BREAKOUT_ONLY && !isBreakingOut && !pinned.has(s)) shouldShow = false;
-
-                    if (shouldShow) {
-                        displayResults.push({
-                            s, slope, fNow, volRatio, filterScore,
-                            rawValueStr: Math.round(avgDrv).toLocaleString(),
-                            livePrice: pNow,
-                            zonePrice: zonePrice,
-                            isTriggered, isFundingDanger, isBreakingOut
-                        });
-                    }
-
-                    if (isTriggered && !stats[s].logged) {
-                        addLog(`🔥 爆發點: ${s.replace('USDT','')} | FR: ${(fNow*100).toFixed(3)}%`, "text-purple-400 font-bold");
-                        stats[s].logged = true;
-                    } else if (!isTriggered) { stats[s].logged = false; }
-
-                    stats[s].p = pNow; stats[s].v = vNow;
-                } catch (e) { console.error(`Err: ${s}`); }
-                
-                await new Promise(r => setTimeout(r, 50)); // 防封鎖延遲
-            }
-
-            document.getElementById('status').innerText = `Scanned ${candidates.length} | Showing ${displayResults.length}`;
-            render(displayResults);
-
-        } catch (e) { addLog("⚠️ Connection Error", "text-red-500"); }
+            render(results);
+        } catch (e) { addLog("❌ Error", "text-red-500"); }
         isUpdating = false;
     }
 
@@ -187,20 +172,14 @@
             div.innerHTML = `
                 <div class="flex justify-between items-start">
                     <div class="flex-1">
-                        <div class="text-white font-black text-xl flex items-center gap-2">
-                            ${pinned.has(item.s) ? '📌' : ''} ${item.s.replace('USDT','')}
-                            <span class="text-[10px] px-1 bg-zinc-800 rounded text-zinc-400">LIVE</span>
-                        </div>
+                        <div class="text-white font-black text-xl">${pinned.has(item.s) ? '📌 ' : ''}${item.s.replace('USDT','')}</div>
                         <div class="text-[10px] ${item.slope < 0 ? 'text-red-500' : 'text-zinc-500'} font-bold">SLP: ${(item.slope*100).toFixed(1)}% | FR: ${(item.fNow*100).toFixed(3)}%</div>
-                        <div class="mt-2 space-y-0.5">
-                            <div class="text-[11px] text-blue-400 font-black">PRICE: ${item.livePrice.toFixed(4)}</div>
-                            <div class="text-[10px] text-zinc-500 font-bold uppercase">Zone: ${item.zonePrice.toFixed(4)} ${item.isBreakingOut ? '<span class="text-green-500 font-black">▲ Breakout</span>' : '<span class="text-red-500">▼ Below</span>'}</div>
-                        </div>
+                        <div class="mt-2 text-[11px] text-blue-400 font-black">PRICE: ${item.livePrice.toFixed(4)}</div>
+                        <div class="text-[10px] text-zinc-500 uppercase">Zone: ${item.zonePrice.toFixed(4)} ${item.isBreakingOut ? '▲' : '▼'}</div>
                     </div>
                     <div class="text-right">
                         <div class="text-yellow-500 font-black text-[10px]">SCORE: ${item.filterScore}</div>
                         <div class="score-val text-xl">${item.rawValueStr}</div>
-                        <div class="text-[8px] text-zinc-600 font-black uppercase tracking-widest">Vacuum</div>
                     </div>
                 </div>
                 <div class="mt-3 flex items-center space-x-2">
@@ -224,7 +203,7 @@
     bindFilter('drv_range', 'drv_val', 'DRV_SCORE', 1);
     bindFilter('vol_range', 'vol_val', 'VOL_RATIO', 10);
 
-    setInterval(update, 5000); 
+    setInterval(update, 10000); // 改成 10 秒更新一次，絕對穩定
     update();
 </script>
 </body>
