@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V5.2.9 - 鋼鐵封包版</title>
+    <title>⚡ SNIPER V5.3.0 - 全量封包版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
@@ -20,7 +20,7 @@
         <div class="bg-zinc-900 p-4 rounded-xl mb-4 border border-white/10 shadow-2xl">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex flex-col">
-                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.2.9</h1>
+                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.3.0</h1>
                     <div id="status" class="text-[9px] text-zinc-500 font-bold uppercase mt-1">Ready</div>
                 </div>
                 <div class="flex gap-4 items-center">
@@ -46,7 +46,7 @@
         <div id="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto pr-2"></div>
     </div>
     <div class="w-80 bg-zinc-950 border-l border-zinc-800 flex flex-col p-4 font-mono text-[10px]">
-        <div class="text-zinc-500 font-black mb-2 pb-2 border-b border-zinc-800">SYSTEM LOGS</div>
+        <div class="text-zinc-500 font-black mb-2 pb-2 border-b border-zinc-800 uppercase">System Logs</div>
         <div id="logs" class="flex-1 overflow-y-auto space-y-2"></div>
     </div>
 
@@ -80,23 +80,23 @@
         if (isUpdating) return;
         isUpdating = true;
         try {
-            // 請求 1: 全市場資費
+            // 第一步：只抓兩個全市場包，絕不循環請求
             const fRes = await fetch('https://fapi.binance.com/fapi/v1/premiumIndex');
             const fData = await fRes.json();
             
-            await new Promise(r => setTimeout(r, 2000));
+            await new Promise(r => setTimeout(r, 2000)); // 休息 2 秒避開 418
 
-            // 請求 2: 全市場行情 (不帶任何參數，嚴禁循環！)
             const tRes = await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr');
             const tData = await tRes.json();
 
-            // 將行情數據轉為 Map，提速且防錯
+            // 在內存中建立地圖，這才是真正的「一次抓完再過濾」
             const tMap = new Map(tData.map(t => [t.symbol, t]));
             let results = [];
             const keyword = document.getElementById('searchInput').value.toUpperCase();
 
             fData.forEach(c => {
                 const s = c.symbol;
+                // 黑名單與非 USDT 排除
                 if (!s.endsWith('USDT') || EXCLUDE.includes(s)) return;
                 
                 const ticker = tMap.get(s);
@@ -130,6 +130,7 @@
                 const isFundingDanger = Math.abs(fNow) >= 0.0005 && filterScore > 40;
                 const isBreakingOut = pNow > zonePrice;
 
+                // 核心過濾邏輯確認
                 let shouldShow = isTriggered || pinned.has(s) || (keyword && s.includes(keyword)) || isFundingDanger;
                 if (IS_BREAKOUT_ONLY && !isBreakingOut && !pinned.has(s)) shouldShow = false;
 
@@ -137,6 +138,7 @@
                     results.push({ s, slope, fNow, volRatio, filterScore, rawValue: Math.round(avgDrv), livePrice: pNow, zonePrice, isTriggered, isFundingDanger, isBreakingOut });
                 }
 
+                // 日誌回報邏輯
                 if (isTriggered && !stats[s].logged) {
                     addLog(`🔥 爆發狙擊: ${s.replace('USDT','')}`, "text-purple-400 font-bold");
                     stats[s].logged = true;
@@ -145,9 +147,9 @@
                 stats[s].p = pNow; stats[s].v = vNow;
             });
 
-            document.getElementById('status').innerText = `Scanned ${fData.length} | Live`;
+            document.getElementById('status').innerText = `Market Scanned: ${fData.length} Coins`;
             render(results);
-        } catch (e) { addLog("❌ Network Blocked - 請更換熱點", "text-red-500"); }
+        } catch (e) { addLog("❌ Network Blocked - 請休息 5 分鐘或更換熱點", "text-red-500 font-black"); }
         isUpdating = false;
     }
 
@@ -167,18 +169,24 @@
             div.innerHTML = `
                 <div class="flex justify-between items-start">
                     <div class="flex-1">
-                        <div class="text-white font-black text-xl">${pinned.has(item.s) ? '📌' : ''} ${item.s.replace('USDT','')}</div>
+                        <div class="text-white font-black text-xl flex items-center gap-2">
+                            ${pinned.has(item.s) ? '📌' : ''} ${item.s.replace('USDT','')}
+                        </div>
                         <div class="text-[10px] ${item.slope < 0 ? 'text-red-500' : 'text-zinc-500'} font-bold">SLP: ${(item.slope*100).toFixed(1)}% | FR: ${(item.fNow*100).toFixed(3)}%</div>
-                        <div class="mt-2 text-[11px] text-blue-400 font-black italic">PRICE: ${item.livePrice.toFixed(4)}</div>
-                        <div class="text-[9px] text-zinc-500">ZONE: ${item.zonePrice.toFixed(4)} ${item.isBreakingOut ? '▲' : '▼'}</div>
+                        <div class="mt-2 space-y-0.5">
+                            <div class="text-[11px] text-blue-400 font-black italic tracking-tighter text-shadow">PRICE: ${item.livePrice.toFixed(4)}</div>
+                            <div class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Zone: ${item.zonePrice.toFixed(4)} ${item.isBreakingOut ? '<span class="text-green-500">▲</span>' : '<span class="text-red-500">▼</span>'}</div>
+                        </div>
                     </div>
                     <div class="text-right">
                         <div class="text-yellow-500 font-black text-[10px]">SCORE: ${item.filterScore}</div>
-                        <div class="score-val text-xl">${item.rawValue.toLocaleString()}</div>
+                        <div class="score-val text-xl tracking-tighter">${item.rawValue.toLocaleString()}</div>
                     </div>
                 </div>
                 <div class="mt-3 flex items-center space-x-2">
-                    <div class="flex-1 bg-zinc-900 h-1 rounded-full overflow-hidden"><div class="h-full bg-blue-500" style="width: ${Math.min(100, item.volRatio * 20)}%"></div></div>
+                    <div class="flex-1 bg-zinc-900 h-1 rounded-full overflow-hidden">
+                        <div class="h-full bg-blue-500 shadow-[0_0_8px_#3b82f6]" style="width: ${Math.min(100, item.volRatio * 20)}%"></div>
+                    </div>
                     <span class="text-blue-400 font-black text-[10px]">${item.volRatio.toFixed(1)}x</span>
                 </div>`;
             list.appendChild(div);
