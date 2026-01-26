@@ -1,61 +1,59 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ DRIVE SNIPER V2.0 - 綜合濾鏡版</title>
+    <title>⚡ DRIVE SNIPER V2.5 - 紀錄增強版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
-        .card { background: #0a0a0a; border: 1px solid #1a3a1a; transition: all 0.3s; position: relative; }
+        .card { background: #0a0a0a; border: 1px solid #1a3a1a; }
         .pinned-card { border: 2px solid #00ff00 !important; background: #0f1a0f !important; }
+        .log-container { background: #050505; border-left: 1px solid #1a3a1a; height: 100vh; overflow-y: auto; }
+        .log-entry { border-bottom: 1px dashed #222; padding: 8px; font-size: 11px; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; background: #0f02; } to { opacity: 1; background: transparent; } }
         input[type=range] { accent-color: #0f0; }
-        .control-panel { background: #111; border-bottom: 2px solid #0f0; position: sticky; top: 0; z-index: 50; }
     </style>
 </head>
-<body class="p-5">
-    <div class="control-panel p-4 mb-6 rounded-lg">
-        <div class="flex justify-between items-center mb-4">
-            <h1 class="text-2xl font-black text-green-500 italic">⚡ DRIVE SNIPER V2.0</h1>
-            <div class="flex gap-4">
-                <input type="text" id="searchInput" placeholder="搜尋幣名..." class="bg-black border border-zinc-700 px-3 py-1 rounded text-sm text-green-400 focus:border-green-500 outline-none">
-                <button onclick="clearStats()" class="bg-red-900 text-white px-3 py-1 rounded text-xs hover:bg-red-700 transition">🗑️ 重置數據</button>
+<body class="flex">
+    <div class="flex-1 p-5 overflow-y-auto h-screen">
+        <div class="control-panel bg-zinc-900 p-4 mb-6 rounded-lg sticky top-0 z-50 border border-green-900/30">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-xl font-black text-green-500 italic uppercase">⚡ Sniper Monitor</h1>
+                <div class="flex gap-2">
+                    <input type="text" id="searchInput" placeholder="搜尋..." class="bg-black border border-zinc-700 px-2 py-1 rounded text-xs text-green-400">
+                    <button onclick="clearLogs()" class="bg-zinc-800 text-gray-400 px-2 py-1 rounded text-[10px] hover:text-white">清除日誌</button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4 text-[10px]">
+                <div class="space-y-1">
+                    <div class="flex justify-between text-red-500"><span>📉 Slope Limit</span><span id="slp_val">-25%</span></div>
+                    <input type="range" id="slp_range" min="-80" max="-1" value="-25" class="w-full">
+                </div>
+                <div class="space-y-1">
+                    <div class="flex justify-between text-yellow-500"><span>⚡ Drive Limit</span><span id="drv_val">5000</span></div>
+                    <input type="range" id="drv_range" min="0" max="20000" value="5000" step="500" class="w-full">
+                </div>
+                <div class="space-y-1">
+                    <div class="flex justify-between text-blue-400"><span>🔥 MOM Limit</span><span id="mom_val">0.5%</span></div>
+                    <input type="range" id="mom_range" min="0" max="50" value="5" class="w-full">
+                </div>
             </div>
         </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
-            <div class="space-y-2">
-                <div class="flex justify-between text-gray-400 font-bold uppercase">
-                    <span>📉 資費斜率 (Slope)</span>
-                    <span id="slp_val" class="text-red-500">-25%</span>
-                </div>
-                <input type="range" id="slp_range" min="-80" max="-5" value="-25" class="w-full">
-            </div>
-            <div class="space-y-2">
-                <div class="flex justify-between text-gray-400 font-bold uppercase">
-                    <span>🔥 OI 增長 (MOM)</span>
-                    <span id="mom_val" class="text-blue-400">0.8%</span>
-                </div>
-                <input type="range" id="mom_range" min="1" max="50" value="8" class="w-full">
-            </div>
-            <div class="space-y-2">
-                <div class="flex justify-between text-gray-400 font-bold uppercase">
-                    <span>⚡ 盤面真空 (Drive)</span>
-                    <span id="drv_val" class="text-yellow-500">5000</span>
-                </div>
-                <input type="range" id="drv_range" min="0" max="20000" value="5000" step="500" class="w-full">
-            </div>
-        </div>
+
+        <div id="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
     </div>
 
-    <div id="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        </div>
+    <div class="w-80 log-container p-3">
+        <div class="text-xs font-bold text-gray-500 mb-4 border-b border-gray-800 pb-2 uppercase tracking-widest">📋 上榜日誌 (Detection Log)</div>
+        <div id="log-list" class="flex flex-col-reverse"></div>
+    </div>
 
     <script>
         const EXCLUDE = ['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT','BNBUSDT'];
-        let stats = {}, baseOI = {}, pinnedList = JSON.parse(localStorage.getItem('sniper_pinned')) || [];
-        
-        let FILTER = { SLP: -0.25, MOM: 0.008, DRV: 5000 };
+        let stats = {}, lastOnBoard = new Set(), pinnedList = JSON.parse(localStorage.getItem('sniper_pinned')) || [];
+        let FILTER = { SLP: -0.25, MOM: 0.005, DRV: 5000 };
 
-        // 滑桿監聽
+        // 滑桿與搜尋控制 (略，同 V2.0 邏輯)
         const bindRange = (id, valId, key, scale) => {
             document.getElementById(id).oninput = (e) => {
                 let val = parseFloat(e.target.value) / scale;
@@ -64,15 +62,33 @@
             };
         };
         bindRange('slp_range', 'slp_val', 'SLP', 100);
-        bindRange('mom_range', 'mom_val', 'MOM', 1000);
         bindRange('drv_range', 'drv_val', 'DRV', 1);
+        bindRange('mom_range', 'mom_val', 'MOM', 1000);
 
+        function addLog(s, drv, slp) {
+            const logList = document.getElementById('log-list');
+            const time = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <div class="flex justify-between">
+                    <span class="text-green-400 font-bold">${s.replace('USDT','')}</span>
+                    <span class="text-gray-600">${time}</span>
+                </div>
+                <div class="flex justify-between text-[10px]">
+                    <span class="text-gray-500">DRV: <span class="text-yellow-600">${drv.toFixed(0)}</span></span>
+                    <span class="text-gray-500">SLP: <span class="text-red-600">${(slp*100).toFixed(1)}%</span></span>
+                </div>
+            `;
+            logList.appendChild(entry);
+            if (logList.childElementCount > 50) logList.firstChild.remove();
+        }
+
+        window.clearLogs = () => { document.getElementById('log-list').innerHTML = ''; };
         window.togglePin = (s) => {
             pinnedList = pinnedList.includes(s) ? pinnedList.filter(i => i !== s) : [...pinnedList, s];
             localStorage.setItem('sniper_pinned', JSON.stringify(pinnedList));
         };
-
-        window.clearStats = () => { stats = {}; baseOI = {}; pinnedList = []; localStorage.clear(); };
 
         async function update() {
             try {
@@ -82,32 +98,23 @@
                 ]);
                 const fData = await fRes.json();
                 const oData = await oResAll.json();
-
-                const list = document.getElementById('list');
-                const search = document.getElementById('searchInput').value.toUpperCase();
+                const currentBoard = new Set();
                 let results = [];
 
                 for (let c of fData) {
                     const s = c.symbol;
                     if (!s.endsWith('USDT') || EXCLUDE.includes(s)) continue;
-                    if (search && !s.includes(search)) continue;
-
                     const fNow = parseFloat(c.lastFundingRate);
                     const ticker = oData.find(t => t.symbol === s);
                     const pNow = parseFloat(ticker.lastPrice);
                     const vNow = parseFloat(ticker.quoteVolume);
 
-                    if (!stats[s]) {
-                        stats[s] = { p: pNow, v: vNow, frHist: [fNow], drvHist: [] };
-                        continue;
-                    }
+                    if (!stats[s]) { stats[s] = { p: pNow, v: vNow, frHist: [fNow], drvHist: [] }; continue; }
 
-                    // 1. 斜率 SLP (過去 30 次更新)
                     stats[s].frHist.push(fNow);
                     if (stats[s].frHist.length > 30) stats[s].frHist.shift();
                     const slope = (fNow - stats[s].frHist[0]) / Math.abs(stats[s].frHist[0] || 0.0001);
 
-                    // 2. 效率 DRV
                     const pMove = Math.abs((pNow - stats[s].p) / stats[s].p) * 100;
                     const vMove = Math.abs((vNow - stats[s].v) / stats[s].v) * 100;
                     const instDrv = vMove > 0 ? (pMove / (vMove + 0.000001)) * 100 : 0;
@@ -115,46 +122,34 @@
                     if (stats[s].drvHist.length > 50) stats[s].drvHist.shift();
                     const avgDrv = stats[s].drvHist.reduce((a, b) => a + b, 0) / stats[s].drvHist.length;
 
-                    // 3. MOM (這裡模擬 OI，實際使用 24h Volume 變動率輔助)
-                    const mom = vMove; // 或者您可以串接真實 OI API
-
-                    stats[s].p = pNow;
-                    stats[s].v = vNow;
-
+                    stats[s].p = pNow; stats[s].v = vNow;
                     const isPinned = pinnedList.includes(s);
-                    // 核心過濾條件
-                    if (isPinned || (slope <= FILTER.SLP && avgDrv >= FILTER.DRV)) {
-                        results.push({ s, slope, avgDrv, mom, price: pNow, isPinned });
+
+                    // 判斷是否滿足上榜條件
+                    if (slope <= FILTER.SLP && avgDrv >= FILTER.DRV && vMove >= FILTER.MOM) {
+                        currentBoard.add(s);
+                        if (!lastOnBoard.has(s)) addLog(s, avgDrv, slope); // 新上榜紀錄
+                        results.push({ s, slope, avgDrv, price: pNow, isPinned });
+                    } else if (isPinned) {
+                        results.push({ s, slope, avgDrv, price: pNow, isPinned });
                     }
                 }
-
-                results.sort((a, b) => (a.isPinned === b.isPinned) ? (b.avgDrv - a.avgDrv) : (a.isPinned ? -1 : 1));
-
+                lastOnBoard = currentBoard;
+                
+                // 渲染 UI (同 V2.0)
+                const list = document.getElementById('list');
+                results.sort((a,b) => (a.isPinned === b.isPinned) ? (b.avgDrv - a.avgDrv) : (a.isPinned ? -1 : 1));
                 list.innerHTML = '';
-                results.slice(0, 20).forEach(item => {
+                results.forEach(item => {
                     const div = document.createElement('div');
-                    div.className = `card p-4 rounded-lg ${item.isPinned ? 'pinned-card' : ''}`;
-                    div.innerHTML = `
-                        <div class="flex justify-between items-start mb-2">
-                            <span class="text-xl font-black text-white">${item.s.replace('USDT','')}</span>
-                            <span class="cursor-pointer text-lg" onclick="togglePin('${item.s}')">${item.isPinned ? '📍' : '📌'}</span>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2 text-[11px]">
-                            <div class="text-gray-500 font-bold uppercase tracking-tighter text-red-500">Slope: ${(item.slope*100).toFixed(1)}%</div>
-                            <div class="text-gray-500 font-bold uppercase tracking-tighter text-yellow-500">Drive: ${item.avgDrv.toFixed(0)}</div>
-                            <div class="text-gray-500 font-bold uppercase tracking-tighter text-blue-400">Price: ${item.price.toFixed(4)}</div>
-                        </div>
-                        <div class="mt-4 h-1 bg-zinc-800 rounded-full overflow-hidden">
-                            <div class="h-full bg-green-500" style="width: ${Math.min(item.avgDrv/500, 100)}%"></div>
-                        </div>
-                    `;
+                    div.className = `card p-3 rounded ${item.isPinned ? 'pinned-card' : ''}`;
+                    div.innerHTML = `<div class="flex justify-between font-bold text-sm"><span>${item.s.replace('USDT','')}</span><span class="cursor-pointer" onclick="togglePin('${item.s}')">${item.isPinned?'📍':'📌'}</span></div>
+                        <div class="text-[10px] mt-2 text-gray-400">SLP: ${(item.slope*100).toFixed(1)}% | DRV: ${item.avgDrv.toFixed(0)}</div>`;
                     list.appendChild(div);
                 });
             } catch (e) { console.error(e); }
         }
-
-        setInterval(update, 3000);
-        update();
+        setInterval(update, 3000); update();
     </script>
 </body>
 </html>
