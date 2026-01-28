@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V5.6.2 - PRO MONITOR</title>
+    <title>⚡ SNIPER V5.6.3 - FINAL BOSS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
         .card { background: #0a0a0a; border: 1px solid #1a3a1a; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .hunt-trigger { border: 2px solid #a855f7 !important; background: #1e1b4b !important; animation: pulse-purple 2s infinite; }
+        .pinned { border: 2px solid #3b82f6 !important; background: #081221 !important; }
         .funding-danger { border: 2px solid #ef4444 !important; box-shadow: inset 0 0 10px #ef444466; }
         @keyframes pulse-purple { 0%, 100% { box-shadow: 0 0 5px #a855f7; } 50% { box-shadow: 0 0 20px #a855f7; } }
         .toggle-active { background: #ef4444 !important; color: white !important; box-shadow: 0 0 15px #ef4444; border-color: white !important; }
@@ -21,7 +22,7 @@
             <div class="flex justify-between items-center mb-4">
                 <div class="flex flex-col">
                     <h1 class="text-xl font-black text-blue-500 italic uppercase flex items-center gap-2">
-                        ⚡ Sniper V5.6.2 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
+                        ⚡ Sniper V5.6.3 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
                     </h1>
                     <div id="status" class="text-[9px] text-zinc-500 font-bold mt-1 uppercase tracking-widest">
                         Monitoring: <span id="count_all" class="text-white">0</span> | Warming: <span id="count_warm" class="text-yellow-500">0</span>
@@ -46,11 +47,10 @@
                 </div>
                 <div class="space-y-1">
                     <div class="flex justify-between text-blue-400"><span>💎 Vacuum Score</span><span id="vac_val">80</span></div>
-                    <input type="range" id="vac_range" min="10" max="300" value="80" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer">
+                    <input type="range" id="vac_range" min="10" max="500" value="80" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer">
                 </div>
             </div>
         </div>
-
         <div id="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto pr-2"></div>
     </div>
 
@@ -62,7 +62,7 @@
 <script>
     const P_USER = "Gkhqyhobnxzjfwgvaiyp347m1jkhn4", P_TOKEN = "acyoe3sz15x4n91r1349fdcau7x6pw";
     const EXCLUDE = ['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT','BNBUSDT','BNXUSDT'];
-    const DEPTH = 100, MEMORY = 60000; // 殘影留 60 秒
+    const DEPTH = 100, MEMORY = 180000; // 殘留改為 3 分鐘 (180,000ms)
     
     let stats = {}, pinned = new Set();
     let SETTINGS = { SLP: -0.025, VOLAT_RATIO: 0.05, VAC: 80, USE_FUEL: true, PUSH_ON: false };
@@ -138,12 +138,16 @@
 
                 if (!isWarmed) return;
 
-                // 核心數據計算
+                // 核心數據計算 (5分鐘波段)
                 const slope = (fNow - stats[s].frHist[0]) / (Math.abs(stats[s].frHist[0]) || 0.0001);
-                const range5m = Math.max(...stats[s].pHist) - Math.min(...stats[s].pHist);
+                const pMax = Math.max(...stats[s].pHist), pMin = Math.min(...stats[s].pHist);
+                const range5m = pMax - pMin;
                 const volatProp = range5m / (h24 - l24 || 1);
+                const totalV = stats[s].vHist[stats[s].vHist.length-1] - stats[s].vHist[0];
                 const vwap5m = stats[s].pvHist.reduce((a,b)=>a+b,0) / (stats[s].vHist.reduce((a,b)=>a+b,0)-stats[s].vHist[0] || 1);
-                const vacScore = (pDelta / (vDelta || 1)) * 2000000;
+                
+                // 真空度：5分鐘總波幅 / 5分鐘總量變 (放大一億倍)
+                const vacScore = (range5m / (Math.abs(totalV) || 1)) * 100000000;
 
                 const gateA = volatProp >= SETTINGS.VOLAT_RATIO; 
                 const gateB = pNow > vwap5m;
@@ -155,11 +159,10 @@
                     if (!stats[s].logged) {
                         addLog(`🎯 觸發: ${s}`, "text-purple-400 font-bold");
                         stats[s].logged = true;
-                        if(SETTINGS.PUSH_ON) fetch('https://api.pushover.net/1/messages.json',{method:'POST',body:new URLSearchParams({token:P_TOKEN,user:P_USER,title:`🎯 SNIPER: ${s}`,message:`價格:$${pNow}\n震幅:${(volatProp*100).toFixed(1)}%`,sound:'alien'})});
+                        if(SETTINGS.PUSH_ON) fetch('https://api.pushover.net/1/messages.json',{method:'POST',body:new URLSearchParams({token:P_TOKEN,user:P_USER,title:`🎯 SNIPER: ${s}`,message:`價:$${pNow}\n震:${(volatProp*100).toFixed(1)}%\nVAC:${vacScore.toFixed(0)}`,sound:'alien'})});
                     }
                 } else { stats[s].logged = false; }
 
-                // 殘影邏輯：符合門檻 或 剛觸發不久
                 const timeSinceLast = Date.now() - stats[s].lastTrigger;
                 if (isTriggeredNow || timeSinceLast < MEMORY || isSearching || isPinned) {
                     if (!results.find(r => r.s === s)) {
@@ -189,7 +192,7 @@
                     <div>
                         <div class="text-white font-black text-lg flex items-center gap-1">
                             ${pinned.has(item.s)?'📌':''} ${item.s.replace('USDT','')}
-                            ${item.linger && !item.isTriggered ? `<span class="text-[8px] bg-zinc-800 px-1 rounded text-zinc-500 animate-pulse">${item.timeLeft}s</span>` : ''}
+                            ${item.linger && !item.isTriggered ? `<span class="text-[8px] bg-zinc-800 px-1 rounded text-zinc-400 animate-pulse">${item.timeLeft}s</span>` : ''}
                         </div>
                         <div class="text-[10px] ${isDanger?'text-red-500':'text-zinc-500'}">FR: ${(item.fNow*100).toFixed(4)}%</div>
                     </div>
@@ -200,14 +203,14 @@
                 </div>
                 ${item.warming ? `
                     <div class="mt-4 p-2 bg-black/50 rounded border border-dashed border-zinc-800 text-center">
-                        <span class="text-zinc-500 loading-dots">HOT DATA LOADING</span>
+                        <span class="text-zinc-500 loading-dots font-bold uppercase">Hot Data Loading</span>
                     </div>
                 ` : `
                     <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-white/5 text-[9px]">
                         <div class="text-red-400">SLOPE: ${(item.slope*100).toFixed(1)}%</div>
                         <div class="text-yellow-400">VOLAT: ${(item.volatProp*100).toFixed(1)}%</div>
                         <div class="text-blue-300 font-bold">VACUUM: ${item.vacScore.toFixed(0)}</div>
-                        <div class="${item.pNow > item.vwap5m ? 'text-green-400':'text-zinc-500'}">VWAP: ${item.pNow > item.vwap5m ? 'ABOVE' : 'BELOW'}</div>
+                        <div class="${item.pNow > item.vwap5m ? 'text-green-400':'text-zinc-500'} font-bold">VWAP: ${item.pNow > item.vwap5m ? 'ABOVE' : 'BELOW'}</div>
                     </div>
                 `}
             `;
