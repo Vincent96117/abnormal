@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V5.6.3 - FINAL BOSS</title>
+    <title>⚡ SNIPER V5.6.4 - PIN FIXED</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
@@ -22,7 +22,7 @@
             <div class="flex justify-between items-center mb-4">
                 <div class="flex flex-col">
                     <h1 class="text-xl font-black text-blue-500 italic uppercase flex items-center gap-2">
-                        ⚡ Sniper V5.6.3 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
+                        ⚡ Sniper V5.6.4 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
                     </h1>
                     <div id="status" class="text-[9px] text-zinc-500 font-bold mt-1 uppercase tracking-widest">
                         Monitoring: <span id="count_all" class="text-white">0</span> | Warming: <span id="count_warm" class="text-yellow-500">0</span>
@@ -62,7 +62,7 @@
 <script>
     const P_USER = "Gkhqyhobnxzjfwgvaiyp347m1jkhn4", P_TOKEN = "acyoe3sz15x4n91r1349fdcau7x6pw";
     const EXCLUDE = ['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT','BNBUSDT','BNXUSDT'];
-    const DEPTH = 100, MEMORY = 180000; // 殘留改為 3 分鐘 (180,000ms)
+    const DEPTH = 100, MEMORY = 180000; 
     
     let stats = {}, pinned = new Set();
     let SETTINGS = { SLP: -0.025, VOLAT_RATIO: 0.05, VAC: 80, USE_FUEL: true, PUSH_ON: false };
@@ -80,12 +80,10 @@
         const btn = document.getElementById('pushToggle');
         btn.classList.toggle('push-active');
         btn.innerText = `📳 Push: ${SETTINGS.PUSH_ON?'ON':'OFF'}`;
-        addLog(`Push Notifications ${SETTINGS.PUSH_ON?'Enabled':'Disabled'}`, "text-yellow-500");
     }
 
     async function testPush() {
-        addLog("Sending Test Push...", "text-blue-400");
-        await fetch('https://api.pushover.net/1/messages.json',{method:'POST',body:new URLSearchParams({token:P_TOKEN,user:P_USER,title:"⚡ SNIPER TEST",message:"測試成功！這是你的外星人訊號。",sound:'alien'})});
+        await fetch('https://api.pushover.net/1/messages.json',{method:'POST',body:new URLSearchParams({token:P_TOKEN,user:P_USER,title:"⚡ SNIPER TEST",message:"測試成功！",sound:'alien'})});
     }
 
     function addLog(msg, color="text-zinc-500") {
@@ -115,13 +113,12 @@
                 const s = c.symbol;
                 if (!s.endsWith('USDT') || EXCLUDE.includes(s)) return;
                 const ticker = tMap.get(s); if (!ticker) return;
-
-                const fNow = parseFloat(c.lastFundingRate), pNow = parseFloat(ticker.lastPrice), vNow = parseFloat(ticker.quoteVolume);
+                const pNow = parseFloat(ticker.lastPrice), fNow = parseFloat(c.lastFundingRate), vNow = parseFloat(ticker.quoteVolume);
                 const h24 = parseFloat(ticker.highPrice), l24 = parseFloat(ticker.lowPrice);
                 
                 if (!stats[s]) stats[s] = { p: pNow, v: vNow, vHist:[], frHist:[], pHist:[], pvHist:[], lastTrigger:0, logged:false };
 
-                const vDelta = Math.abs(vNow - stats[s].v), pDelta = Math.abs(pNow - stats[s].p);
+                const vDelta = Math.abs(vNow - stats[s].v);
                 stats[s].vHist.push(vNow); stats[s].frHist.push(fNow); stats[s].pHist.push(pNow); stats[s].pvHist.push(pNow * vDelta);
                 if (stats[s].vHist.length > DEPTH) { stats[s].vHist.shift(); stats[s].frHist.shift(); stats[s].pHist.shift(); stats[s].pvHist.shift(); }
 
@@ -131,23 +128,32 @@
                 const isSearching = keyword && s.includes(keyword);
                 const isPinned = pinned.has(s);
 
+                // --- 修正點：如果是搜尋中或已釘選，無論如何都要顯示 ---
                 if (isSearching || isPinned) {
-                    results.push({ s, fNow, pNow, zonePrice:(h24+l24)/2, warming: !isWarmed, isPinned, isSearching });
+                    let item = { s, fNow, pNow, zonePrice:(h24+l24)/2, warming: !isWarmed, isPinned, isSearching };
+                    if (isWarmed) {
+                        const slope = (fNow - stats[s].frHist[0]) / (Math.abs(stats[s].frHist[0]) || 0.0001);
+                        const pMax = Math.max(...stats[s].pHist), pMin = Math.min(...stats[s].pHist);
+                        const range5m = pMax - pMin;
+                        const totalV = stats[s].vHist[stats[s].vHist.length-1] - stats[s].vHist[0];
+                        item.slope = slope;
+                        item.volatProp = range5m / (h24 - l24 || 1);
+                        item.vacScore = (range5m / (Math.abs(totalV) || 1)) * 100000000;
+                        item.vwap5m = stats[s].pvHist.reduce((a,b)=>a+b,0) / (stats[s].vHist.reduce((a,b)=>a+b,0)-stats[s].vHist[0] || 1);
+                    }
+                    results.push(item);
                     if (!isWarmed) return;
                 }
 
                 if (!isWarmed) return;
 
-                // 核心數據計算 (5分鐘波段)
                 const slope = (fNow - stats[s].frHist[0]) / (Math.abs(stats[s].frHist[0]) || 0.0001);
                 const pMax = Math.max(...stats[s].pHist), pMin = Math.min(...stats[s].pHist);
                 const range5m = pMax - pMin;
                 const volatProp = range5m / (h24 - l24 || 1);
                 const totalV = stats[s].vHist[stats[s].vHist.length-1] - stats[s].vHist[0];
-                const vwap5m = stats[s].pvHist.reduce((a,b)=>a+b,0) / (stats[s].vHist.reduce((a,b)=>a+b,0)-stats[s].vHist[0] || 1);
-                
-                // 真空度：5分鐘總波幅 / 5分鐘總量變 (放大一億倍)
                 const vacScore = (range5m / (Math.abs(totalV) || 1)) * 100000000;
+                const vwap5m = stats[s].pvHist.reduce((a,b)=>a+b,0) / (stats[s].vHist.reduce((a,b)=>a+b,0)-stats[s].vHist[0] || 1);
 
                 const gateA = volatProp >= SETTINGS.VOLAT_RATIO; 
                 const gateB = pNow > vwap5m;
@@ -157,15 +163,16 @@
                 if (isTriggeredNow) {
                     stats[s].lastTrigger = Date.now();
                     if (!stats[s].logged) {
-                        addLog(`🎯 觸發: ${s}`, "text-purple-400 font-bold");
+                        addLog(`🎯 爆發: ${s}`, "text-purple-400 font-bold");
                         stats[s].logged = true;
-                        if(SETTINGS.PUSH_ON) fetch('https://api.pushover.net/1/messages.json',{method:'POST',body:new URLSearchParams({token:P_TOKEN,user:P_USER,title:`🎯 SNIPER: ${s}`,message:`價:$${pNow}\n震:${(volatProp*100).toFixed(1)}%\nVAC:${vacScore.toFixed(0)}`,sound:'alien'})});
+                        if(SETTINGS.PUSH_ON) fetch('https://api.pushover.net/1/messages.json',{method:'POST',body:new URLSearchParams({token:P_TOKEN,user:P_USER,title:`🎯 SNIPER: ${s}`,message:`價:$${pNow}\nVAC:${vacScore.toFixed(0)}`,sound:'alien'})});
                     }
                 } else { stats[s].logged = false; }
 
                 const timeSinceLast = Date.now() - stats[s].lastTrigger;
-                if (isTriggeredNow || timeSinceLast < MEMORY || isSearching || isPinned) {
-                    if (!results.find(r => r.s === s)) {
+                // --- 修正點：避免結果重複添加 ---
+                if (!results.find(r => r.s === s)) {
+                    if (isTriggeredNow || timeSinceLast < MEMORY) {
                         results.push({ s, fNow, pNow, slope, vacScore, volatProp, vwap5m, zonePrice:(h24+l24)/2, isTriggered: isTriggeredNow, linger: timeSinceLast < MEMORY, warming:false, timeLeft: Math.ceil((MEMORY-timeSinceLast)/1000) });
                     }
                 }
@@ -180,21 +187,18 @@
 
     function render(results) {
         const list = document.getElementById('list'); list.innerHTML = '';
-        results.sort((a,b) => (b.isTriggered - a.isTriggered) || (pinned.has(b.s) - pinned.has(a.s)));
+        results.sort((a,b) => (pinned.has(b.s) - pinned.has(a.s)) || (b.isTriggered - a.isTriggered));
         results.forEach(item => {
-            const isDanger = Math.abs(item.fNow) >= 0.0005;
             const div = document.createElement('div');
-            div.className = `card p-4 rounded-xl ${item.isTriggered ? 'hunt-trigger' : ''} ${isDanger ? 'funding-danger' : ''} ${pinned.has(item.s)?'pinned':''}`;
-            div.onclick = () => { pinned.has(item.s) ? pinned.delete(item.s) : pinned.add(item.s); };
+            const isPinned = pinned.has(item.s);
+            div.className = `card p-4 rounded-xl ${item.isTriggered ? 'hunt-trigger' : ''} ${isPinned ? 'pinned' : ''}`;
+            div.onclick = () => { isPinned ? pinned.delete(item.s) : pinned.add(item.s); };
             
             div.innerHTML = `
                 <div class="flex justify-between items-start">
                     <div>
-                        <div class="text-white font-black text-lg flex items-center gap-1">
-                            ${pinned.has(item.s)?'📌':''} ${item.s.replace('USDT','')}
-                            ${item.linger && !item.isTriggered ? `<span class="text-[8px] bg-zinc-800 px-1 rounded text-zinc-400 animate-pulse">${item.timeLeft}s</span>` : ''}
-                        </div>
-                        <div class="text-[10px] ${isDanger?'text-red-500':'text-zinc-500'}">FR: ${(item.fNow*100).toFixed(4)}%</div>
+                        <div class="text-white font-black text-lg">${isPinned?'📌':''} ${item.s.replace('USDT','')} ${item.linger && !item.isTriggered ? `<span class="text-[8px] bg-zinc-800 px-1 rounded text-zinc-400 animate-pulse ml-1">${item.timeLeft}s</span>` : ''}</div>
+                        <div class="text-[10px] text-zinc-500">FR: ${(item.fNow*100).toFixed(4)}%</div>
                     </div>
                     <div class="text-right">
                         <div class="text-blue-400 font-bold">$${item.pNow.toFixed(item.pNow<1?6:2)}</div>
@@ -202,14 +206,12 @@
                     </div>
                 </div>
                 ${item.warming ? `
-                    <div class="mt-4 p-2 bg-black/50 rounded border border-dashed border-zinc-800 text-center">
-                        <span class="text-zinc-500 loading-dots font-bold uppercase">Hot Data Loading</span>
-                    </div>
+                    <div class="mt-4 p-2 bg-black/50 rounded text-center"><span class="text-zinc-500 loading-dots font-bold uppercase text-[9px]">Hot Data Loading</span></div>
                 ` : `
                     <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-white/5 text-[9px]">
                         <div class="text-red-400">SLOPE: ${(item.slope*100).toFixed(1)}%</div>
                         <div class="text-yellow-400">VOLAT: ${(item.volatProp*100).toFixed(1)}%</div>
-                        <div class="text-blue-300 font-bold">VACUUM: ${item.vacScore.toFixed(0)}</div>
+                        <div class="text-blue-300 font-bold">VACUUM: ${item.vacScore ? item.vacScore.toFixed(0) : '0'}</div>
                         <div class="${item.pNow > item.vwap5m ? 'text-green-400':'text-zinc-500'} font-bold">VWAP: ${item.pNow > item.vwap5m ? 'ABOVE' : 'BELOW'}</div>
                     </div>
                 `}
