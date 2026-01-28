@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V5.6.0 - MOMENTUM MASTER</title>
+    <title>⚡ SNIPER V5.6.1 - CLEAN & EXTENDED</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
@@ -18,26 +18,26 @@
         <div class="bg-zinc-900 p-4 rounded-xl mb-4 border border-white/10 shadow-2xl">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex flex-col">
-                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.6.0</h1>
-                    <div id="status" class="text-[9px] text-zinc-500 font-bold mt-1 uppercase tracking-widest">Momentum Analysis Mode</div>
+                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.6.1</h1>
+                    <div id="status" class="text-[9px] text-zinc-500 font-bold mt-1 uppercase tracking-widest">Clean Filter Mode</div>
                 </div>
                 <div class="flex gap-2">
                     <button id="slopeToggle" onclick="toggleFilter('USE_FUEL')" class="bg-black border border-zinc-700 px-3 py-2 rounded-lg font-black text-zinc-400 uppercase text-[10px] toggle-active">⚓ Fuel Filter: ON</button>
-                    <input type="text" id="searchInput" placeholder="SEARCH COIN..." class="bg-black border border-zinc-800 px-3 py-1 rounded text-blue-400 outline-none w-32 uppercase">
+                    <input type="text" id="searchInput" placeholder="SEARCH..." class="bg-black border border-zinc-800 px-3 py-1 rounded text-blue-400 outline-none w-32 uppercase">
                 </div>
             </div>
             <div class="grid grid-cols-3 gap-6 font-black uppercase">
                 <div class="space-y-1">
-                    <div class="flex justify-between text-red-500"><span>📉 Slope Limit</span><span id="slp_val">-2.5%</span></div>
-                    <input type="range" id="slp_range" min="-80" max="0" value="-25" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer">
+                    <div class="flex justify-between text-red-500"><span>📉 Slope Limit (Extreme)</span><span id="slp_val">-2.5%</span></div>
+                    <input type="range" id="slp_range" min="-800" max="0" value="-25" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer">
                 </div>
                 <div class="space-y-1">
-                    <div class="flex justify-between text-yellow-500"><span>🔥 Volat Ratio (5m/24h)</span><span id="volat_val">5%</span></div>
+                    <div class="flex justify-between text-yellow-500"><span>🔥 Volat Ratio</span><span id="volat_val">5%</span></div>
                     <input type="range" id="volat_range" min="1" max="30" value="5" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer">
                 </div>
                 <div class="space-y-1">
                     <div class="flex justify-between text-blue-400"><span>💎 Vacuum Score</span><span id="vac_val">80</span></div>
-                    <input type="range" id="vac_range" min="10" max="150" value="80" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer">
+                    <input type="range" id="vac_range" min="10" max="300" value="80" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer">
                 </div>
             </div>
         </div>
@@ -51,7 +51,7 @@
 <script>
     const P_USER = "Gkhqyhobnxzjfwgvaiyp347m1jkhn4", P_TOKEN = "acyoe3sz15x4n91r1349fdcau7x6pw";
     const EXCLUDE = ['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT','BNBUSDT','BNXUSDT'];
-    const DEPTH = 100; // 5分鐘
+    const DEPTH = 100; 
     const MEMORY = 300000;
     
     let stats = {}, pinned = new Set();
@@ -90,8 +90,7 @@
             fData.forEach(c => {
                 const s = c.symbol;
                 if (!s.endsWith('USDT') || EXCLUDE.includes(s)) return;
-                const ticker = tMap.get(s);
-                if (!ticker) return;
+                const ticker = tMap.get(s); if (!ticker) return;
 
                 const fNow = parseFloat(c.lastFundingRate), pNow = parseFloat(ticker.lastPrice), vNow = parseFloat(ticker.quoteVolume);
                 const h24 = parseFloat(ticker.highPrice), l24 = parseFloat(ticker.lowPrice);
@@ -108,20 +107,21 @@
                 const isPinned = pinned.has(s);
                 const isWarmed = stats[s].frHist.length >= DEPTH;
 
-                if (!isWarmed) {
-                    if (isSearching || isPinned || Math.abs(fNow) >= 0.0005) results.push({ s, fNow, pNow, zonePrice, warming:true });
-                    return;
+                // 搜尋或置頂強制顯示
+                if (isSearching || isPinned) {
+                    results.push({ s, fNow, pNow, zonePrice, warming: !isWarmed });
+                    if (!isWarmed) return;
                 }
 
-                // 計算新指標
+                if (!isWarmed) return;
+
                 const slope = (fNow - stats[s].frHist[0]) / (Math.abs(stats[s].frHist[0]) || 0.0001);
                 const range5m = Math.max(...stats[s].pHist) - Math.min(...stats[s].pHist);
-                const volatProp = range5m / (range24h || 1); // 5M震幅佔24H比例
+                const volatProp = range5m / (range24h || 1);
                 const totalV = stats[s].vHist.reduce((a,b)=>a+b,0) - stats[s].vHist[0];
                 const vwap5m = stats[s].pvHist.reduce((a,b)=>a+b,0) / (totalV || 1);
-                const vacScore = (pDelta / (vDelta || 1)) * 1000000;
+                const vacScore = (pDelta / (vDelta || 1)) * 2000000;
 
-                // 三道閥門判定
                 const gateA = volatProp >= SETTINGS.VOLAT_RATIO; 
                 const gateB = pNow > vwap5m && pNow > zonePrice;
                 const gateC = !SETTINGS.USE_FUEL || (slope <= SETTINGS.SLP && vacScore >= SETTINGS.VAC);
@@ -130,14 +130,17 @@
                 if (isTriggeredNow) {
                     stats[s].lastTrigger = Date.now();
                     if (!stats[s].logged) {
-                        addLog(`🎯 爆發確立: ${s} (震幅比:${(volatProp*100).toFixed(1)}%)`, "text-purple-400 font-bold");
+                        addLog(`🎯 爆發確立: ${s}`, "text-purple-400 font-bold");
                         stats[s].logged = true;
                         fetch('https://api.pushover.net/1/messages.json',{method:'POST',body:new URLSearchParams({token:P_TOKEN,user:P_USER,title:`🎯 SNIPER: ${s}`,message:`價格:$${pNow}\n震幅比:${(volatProp*100).toFixed(1)}%`,sound:'alien'})});
                     }
                 } else { stats[s].logged = false; }
 
-                if (isTriggeredNow || (Date.now()-stats[s].lastTrigger < MEMORY) || isPinned || isSearching || Math.abs(fNow)>=0.0005) {
-                    results.push({ s, fNow, pNow, slope, vacScore, volatProp, vwap5m, zonePrice, isTriggered: (Date.now()-stats[s].lastTrigger < MEMORY), warming:false });
+                // 關鍵：只有符合條件的才上榜，移除高資費強制上榜邏輯
+                if (isTriggeredNow || (Date.now()-stats[s].lastTrigger < MEMORY) || isSearching || isPinned) {
+                    if (!results.find(r => r.s === s)) {
+                        results.push({ s, fNow, pNow, slope, vacScore, volatProp, vwap5m, zonePrice, isTriggered: (Date.now()-stats[s].lastTrigger < MEMORY), warming:false });
+                    }
                 }
                 stats[s].p = pNow; stats[s].v = vNow;
             });
@@ -149,7 +152,7 @@
     function render(results) {
         const list = document.getElementById('list'); list.innerHTML = '';
         results.sort((a,b) => (b.isTriggered - a.isTriggered) || (pinned.has(b.s) - pinned.has(a.s)) || (Math.abs(b.fNow) - Math.abs(a.fNow)));
-        results.slice(0, 24).forEach(item => {
+        results.slice(0, 30).forEach(item => {
             const isDanger = Math.abs(item.fNow) >= 0.0005;
             const div = document.createElement('div');
             div.className = `card p-4 rounded-xl ${item.isTriggered ? 'hunt-trigger' : (pinned.has(item.s) ? 'pinned' : '')} ${isDanger ? 'funding-danger' : ''}`;
