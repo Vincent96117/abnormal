@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V5.6.5 - FLASH MODE</title>
+    <title>⚡ SNIPER V5.6.6 - SUB-CARD FIXED</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
         .card { background: #0a0a0a; border: 1px solid #1a3a1a; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        /* 紫卡動畫 */
         .hunt-trigger { border: 2px solid #a855f7 !important; background: #1e1b4b !important; animation: pulse-purple 2s infinite; }
+        /* 黃卡動畫 (閃電) */
         .flash-trigger { border: 2px solid #facc15 !important; background: #422006 !important; animation: pulse-yellow 1s infinite; }
         .pinned { border: 2px solid #3b82f6 !important; background: #081221 !important; }
         @keyframes pulse-purple { 0%, 100% { box-shadow: 0 0 5px #a855f7; } 50% { box-shadow: 0 0 20px #a855f7; } }
@@ -21,7 +23,7 @@
             <div class="flex justify-between items-center mb-4">
                 <div class="flex flex-col">
                     <h1 class="text-xl font-black text-blue-500 italic uppercase flex items-center gap-2">
-                        ⚡ Sniper V5.6.5 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
+                        ⚡ Sniper V5.6.6 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
                     </h1>
                     <div id="status" class="text-[9px] text-zinc-500 font-bold mt-1 uppercase tracking-widest">
                         Monitoring: <span id="count_all" class="text-white">0</span> | Warming: <span id="count_warm" class="text-yellow-500">0</span>
@@ -69,7 +71,7 @@
 
     function toggleFilter(key) { SETTINGS[key] = !SETTINGS[key]; const btn = document.getElementById('slopeToggle'); btn.classList.toggle('toggle-active'); btn.innerText = `⚓ Fuel Filter: ${SETTINGS[key]?'ON':'OFF'}`; }
     function togglePush() { SETTINGS.PUSH_ON = !SETTINGS.PUSH_ON; const btn = document.getElementById('pushToggle'); btn.classList.toggle('push-active'); btn.innerText = `📳 Push: ${SETTINGS.PUSH_ON?'ON':'OFF'}`; }
-    async function testPush() { await fetch('https://api.pushover.net/1/messages.json',{method:'POST',body:new URLSearchParams({token:P_TOKEN,user:P_USER,title:"⚡ SNIPER TEST",message:"Flash Mode Active!",sound:'alien'})}); }
+    async function testPush() { await fetch('https://api.pushover.net/1/messages.json',{method:'POST',body:new URLSearchParams({token:P_TOKEN,user:P_USER,title:"⚡ SNIPER TEST",message:"V5.6.6 Sub-card Ready!",sound:'alien'})}); }
 
     function addLog(msg, color="text-zinc-500") {
         const logs = document.getElementById('logs');
@@ -102,24 +104,20 @@
                 const h24 = parseFloat(ticker.highPrice), l24 = parseFloat(ticker.lowPrice);
                 
                 if (!stats[s]) stats[s] = { p: pNow, v: vNow, vHist:[], frHist:[], pHist:[], pvHist:[], lastTrigger:0, logged:false };
-
                 const vDelta = Math.abs(vNow - stats[s].v);
                 stats[s].vHist.push(vNow); stats[s].frHist.push(fNow); stats[s].pHist.push(pNow); stats[s].pvHist.push(pNow * vDelta);
                 if (stats[s].vHist.length > DEPTH) { stats[s].vHist.shift(); stats[s].frHist.shift(); stats[s].pHist.shift(); stats[s].pvHist.shift(); }
 
                 const isWarmed = stats[s].frHist.length >= DEPTH;
                 if (!isWarmed) wCount++;
-                const isPinned = pinned.has(s);
-                const isSearching = keyword && s.includes(keyword);
+                const isPinned = pinned.has(s), isSearching = keyword && s.includes(keyword);
 
                 if (isSearching || isPinned) {
                     let item = { s, fNow, pNow, zonePrice:(h24+l24)/2, warming: !isWarmed, isPinned, isSearching };
                     results.push(item);
                 }
-
                 if (!isWarmed) return;
 
-                // A 軌道: 5分鐘數據
                 const slope = (fNow - stats[s].frHist[0]) / (Math.abs(stats[s].frHist[0]) || 0.0001);
                 const pMax = Math.max(...stats[s].pHist), pMin = Math.min(...stats[s].pHist);
                 const range5m = pMax - pMin;
@@ -127,15 +125,14 @@
                 const totalV = stats[s].vHist[stats[s].vHist.length-1] - stats[s].vHist[0];
                 const vacScore = (range5m / (Math.abs(totalV) || 1)) * 100000000;
                 const vwap5m = stats[s].pvHist.reduce((a,b)=>a+b,0) / (stats[s].vHist.reduce((a,b)=>a+b,0)-stats[s].vHist[0] || 1);
-
-                // B 軌道: 1分鐘閃電 (過去 20 筆數據約為 1 分鐘)
+                
                 const p1m = stats[s].pHist[stats[s].pHist.length - 20] || stats[s].pHist[0];
                 const flashRatio = (pNow - p1m) / (h24 - l24 || 1);
 
                 const gateA = volatProp >= SETTINGS.VOLAT_RATIO;
                 const gateB = pNow > vwap5m;
                 const gateC = !SETTINGS.USE_FUEL || (slope <= SETTINGS.SLP && vacScore >= SETTINGS.VAC);
-                const gateFlash = flashRatio >= SETTINGS.VOLAT_RATIO; // 閃電門檻共用閥門
+                const gateFlash = flashRatio >= SETTINGS.VOLAT_RATIO;
 
                 const isTriggeredNow = (gateA && gateB && gateC) || gateFlash;
                 if (isTriggeredNow) {
@@ -169,8 +166,11 @@
         results.forEach(item => {
             const div = document.createElement('div');
             const isPinned = pinned.has(item.s);
-            div.className = `card p-4 rounded-xl ${item.isFlash ? 'flash-trigger' : (item.isTriggered ? 'hunt-trigger' : '')} ${isPinned ? 'pinned' : ''}`;
+            // 決定卡片邊框色
+            const borderClass = item.isFlash ? 'flash-trigger' : (item.isTriggered ? 'hunt-trigger' : '');
+            div.className = `card p-4 rounded-xl ${borderClass} ${isPinned ? 'pinned' : ''}`;
             div.onclick = () => { isPinned ? pinned.delete(item.s) : pinned.add(item.s); };
+            
             div.innerHTML = `
                 <div class="flex justify-between items-start">
                     <div>
@@ -183,8 +183,8 @@
                     <div class="mt-4 p-2 bg-black/50 rounded text-center"><span class="text-zinc-500 loading-dots font-bold uppercase text-[9px]">Hot Data Loading</span></div>
                 ` : `
                     <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-white/5 text-[9px]">
-                        <div class="text-red-400">SLOPE: ${(item.slope*100).toFixed(1)}%</div>
-                        <div class="text-yellow-400 font-bold">1M FLASH: ${(item.flashRatio*100).toFixed(1)}%</div>
+                        <div class="text-red-400">SLOPE: ${item.slope ? (item.slope*100).toFixed(1) : '0.0'}%</div>
+                        <div class="${item.isFlash ? 'text-yellow-400 font-black' : 'text-zinc-500'}">1M FLASH: ${item.flashRatio ? (item.flashRatio*100).toFixed(1) : '0.0'}%</div>
                         <div class="text-blue-300 font-bold">VACUUM: ${item.vacScore ? item.vacScore.toFixed(0) : '0'}</div>
                         <div class="${item.pNow > item.vwap5m ? 'text-green-400':'text-zinc-500'} font-bold text-right italic">VWAP OK</div>
                     </div>
