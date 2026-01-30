@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V5.7.4 - QUICK RESPONSE</title>
+    <title>⚡ SNIPER V5.7.5 - INSTANT BOOT</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
@@ -19,8 +19,8 @@
         <div class="bg-zinc-900 p-4 rounded-xl mb-4 border border-white/10 shadow-2xl">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex flex-col">
-                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.7.4 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span></h1>
-                    <div class="text-[9px] text-zinc-500 font-bold mt-1 uppercase tracking-widest">Status: <span id="load_status" class="text-white italic">WARMING DATA...</span></div>
+                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.7.5 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span></h1>
+                    <div class="text-[9px] text-zinc-500 font-bold mt-1 uppercase tracking-widest">Status: <span id="load_status" class="text-white">WARMING (0s)</span></div>
                 </div>
                 <div class="flex gap-2">
                     <button id="slopeToggle" onclick="toggleFilter('USE_FUEL')" class="bg-black border border-zinc-700 px-3 py-2 rounded-lg font-black text-zinc-400 text-[10px] toggle-active">⚓ Fuel Filter: ON</button>
@@ -46,7 +46,7 @@
     const DEPTH = 1200, MEMORY = 180000; 
     let stats = {}, pinned = new Set(), currentKeyword = "";
     let SETTINGS = { SLP: -0.025, VOLAT_RATIO: 0.15, VAC: 80, USE_FUEL: true };
-    let isUpdating = false;
+    let isUpdating = false, bootTime = Date.now();
 
     function handleSearch(e) {
         if (e.key === 'Enter') {
@@ -71,6 +71,9 @@
         if (isUpdating) return;
         isUpdating = true;
         document.getElementById('heartbeat').classList.toggle('opacity-0');
+        const elapsed = Math.floor((Date.now() - bootTime)/1000);
+        document.getElementById('load_status').innerText = elapsed < 60 ? `WARMING (${elapsed}s)` : "SYSTEM ACTIVE";
+
         try {
             const [fRes, tRes] = await Promise.all([
                 fetch('https://fapi.binance.com/fapi/v1/premiumIndex'),
@@ -100,21 +103,23 @@
                 }
 
                 const dataLen = stats[s].frHist.length;
-                if (dataLen < 50) return; // 稍微降低熱機門檻到 2.5 分鐘
+                if (dataLen < 20) return; // 只要 1 分鐘數據就開始運算
 
                 const p5m = stats[s].pHist.slice(-100);
                 const range5m = Math.max(...p5m) - Math.min(...p5m);
                 const v5mSum = Math.max(0.0001, stats[s].vDeltas.slice(-100).reduce((a,b)=>a+b,0));
                 const vwap5m = stats[s].pvDeltas.slice(-100).reduce((a,b)=>a+b,0) / v5mSum;
+                
+                // 背景波動計算保護
                 const p15m = stats[s].pHist.slice(-300);
-                const bgVolat = (Math.max(...p15m) - Math.min(...p15m)) / pNow;
+                const bgVolat = p15m.length > 50 ? (Math.max(...p15m) - Math.min(...p15m)) / pNow : 0;
 
-                const slope = (fNow - stats[s].frHist[dataLen-100]) / (Math.abs(stats[s].frHist[dataLen-100]) || 0.0001);
+                const slope = dataLen >= 100 ? (fNow - stats[s].frHist[dataLen-100]) / (Math.abs(stats[s].frHist[dataLen-100]) || 0.0001) : 0;
                 const vacScore = (range5m / v5mSum) * 100000000;
                 const flashRatio = (pNow - (stats[s].pHist[dataLen-20] || stats[s].pHist[0])) / (h24 - l24 || 1);
 
-                // 2.2 倍蓄力，更靈敏
-                const isFlash = (flashRatio >= SETTINGS.VOLAT_RATIO) && (flashRatio > bgVolat * 2.2) && (vacScore >= SETTINGS.VAC);
+                // --- 判定邏輯 (子卡不動，黃卡蓄力) ---
+                const isFlash = (flashRatio >= SETTINGS.VOLAT_RATIO) && (bgVolat === 0 || flashRatio > bgVolat * 2.2) && (vacScore >= SETTINGS.VAC);
                 const isFuel = (range5m/(h24-l24||1) >= SETTINGS.VOLAT_RATIO) && (pNow > vwap5m) && (!SETTINGS.USE_FUEL || (slope <= SETTINGS.SLP && vacScore >= SETTINGS.VAC));
 
                 const isTriggeredNow = isFlash || isFuel;
@@ -132,7 +137,6 @@
                     results.push({ s, fNow, pNow, slope, vacScore, flashRatio, isTriggered: isTriggeredNow, isFlash, linger: timeSinceLast < MEMORY && !isTriggeredNow, timeLeft: Math.ceil((MEMORY-timeSinceLast)/1000) });
                 }
             });
-            document.getElementById('load_status').innerText = "SYSTEM ACTIVE";
             render(results);
         } catch (e) { console.error(e); }
         isUpdating = false;
