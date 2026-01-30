@@ -1,17 +1,16 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V5.7.3 - POWER SURGE</title>
+    <title>⚡ SNIPER V5.7.4 - QUICK RESPONSE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
         .card { background: #0a0a0a; border: 1px solid #1a3a1a; cursor: pointer; transition: all 0.3s; }
-        /* 閃爍動畫回歸 */
         .hunt-trigger { border: 2px solid #a855f7 !important; background: #1e1b4b !important; animation: pulse-purple 1.5s infinite; }
         .flash-trigger { border: 2px solid #facc15 !important; background: #422006 !important; animation: pulse-yellow 0.8s infinite; }
         .pinned { border: 2px solid #3b82f6 !important; background: #081221 !important; }
-        @keyframes pulse-purple { 0%, 100% { box-shadow: 0 0 5px #a855f7; border-color: #a855f7; } 50% { box-shadow: 0 0 20px #a855f7; border-color: #d8b4fe; } }
-        @keyframes pulse-yellow { 0%, 100% { box-shadow: 0 0 5px #facc15; border-color: #facc15; } 50% { box-shadow: 0 0 20px #facc15; border-color: #fef08a; } }
+        @keyframes pulse-purple { 0%, 100% { box-shadow: 0 0 5px #a855f7; } 50% { box-shadow: 0 0 20px #a855f7; } }
+        @keyframes pulse-yellow { 0%, 100% { box-shadow: 0 0 5px #facc15; } 50% { box-shadow: 0 0 20px #facc15; } }
         .toggle-active { background: #ef4444 !important; color: white !important; }
     </style>
 </head>
@@ -20,12 +19,12 @@
         <div class="bg-zinc-900 p-4 rounded-xl mb-4 border border-white/10 shadow-2xl">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex flex-col">
-                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.7.3 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span></h1>
-                    <div class="text-[9px] text-zinc-500 font-bold mt-1 uppercase tracking-widest">Logic: <span class="text-yellow-500 italic">Power Surge (No Lag)</span></div>
+                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.7.4 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span></h1>
+                    <div class="text-[9px] text-zinc-500 font-bold mt-1 uppercase tracking-widest">Status: <span id="load_status" class="text-white italic">WARMING DATA...</span></div>
                 </div>
                 <div class="flex gap-2">
                     <button id="slopeToggle" onclick="toggleFilter('USE_FUEL')" class="bg-black border border-zinc-700 px-3 py-2 rounded-lg font-black text-zinc-400 text-[10px] toggle-active">⚓ Fuel Filter: ON</button>
-                    <input type="text" id="searchInput" onkeydown="handleSearch(event)" placeholder="SEARCH & ENTER..." class="bg-black border border-zinc-800 px-3 py-1 rounded text-blue-400 outline-none w-40 uppercase font-black placeholder:text-zinc-700">
+                    <input type="text" id="searchInput" onkeydown="handleSearch(event)" placeholder="SYMBOL & ENTER" class="bg-black border-2 border-zinc-800 px-3 py-1 rounded text-blue-400 outline-none w-40 uppercase font-black transition-all">
                 </div>
             </div>
             <div class="grid grid-cols-3 gap-6 font-black uppercase">
@@ -37,7 +36,7 @@
         <div id="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto pr-2"></div>
     </div>
     <div class="w-72 bg-zinc-950 border-l border-zinc-900 flex flex-col p-4 text-[10px]">
-        <div class="text-zinc-600 font-black mb-4 border-b border-zinc-800 pb-2 uppercase text-center italic font-black text-blue-400">Filtered Signals</div>
+        <div class="text-zinc-600 font-black mb-4 border-b border-zinc-800 pb-2 uppercase text-center italic">Live Signals</div>
         <div id="logs" class="flex-1 overflow-y-auto space-y-2"></div>
     </div>
 
@@ -49,11 +48,11 @@
     let SETTINGS = { SLP: -0.025, VOLAT_RATIO: 0.15, VAC: 80, USE_FUEL: true };
     let isUpdating = false;
 
-    // 搜尋 Enter 處理
     function handleSearch(e) {
         if (e.key === 'Enter') {
             currentKeyword = e.target.value.toUpperCase();
-            addLog(`Search Target: ${currentKeyword || 'ALL'}`, "text-blue-400 font-black italic underline");
+            e.target.style.borderColor = currentKeyword ? '#3b82f6' : '#27272a';
+            addLog(`SEARCH: ${currentKeyword || 'ALL'}`, "text-blue-400 font-black");
         }
     }
 
@@ -89,7 +88,7 @@
                 const h24 = parseFloat(ticker.highPrice), l24 = parseFloat(ticker.lowPrice);
                 
                 if (!stats[s]) stats[s] = { lastV: vNow, vDeltas:[], frHist:[], pHist:[], pvDeltas:[], lastTrigger:0, logged:false };
-
+                
                 const vDelta = Math.max(0, vNow - stats[s].lastV);
                 stats[s].lastV = vNow;
                 stats[s].vDeltas.push(vDelta);
@@ -101,15 +100,12 @@
                 }
 
                 const dataLen = stats[s].frHist.length;
-                if (dataLen < 100) return;
+                if (dataLen < 50) return; // 稍微降低熱機門檻到 2.5 分鐘
 
-                // 核心計算
                 const p5m = stats[s].pHist.slice(-100);
                 const range5m = Math.max(...p5m) - Math.min(...p5m);
                 const v5mSum = Math.max(0.0001, stats[s].vDeltas.slice(-100).reduce((a,b)=>a+b,0));
                 const vwap5m = stats[s].pvDeltas.slice(-100).reduce((a,b)=>a+b,0) / v5mSum;
-                
-                // 15分鐘背景波動 (不追高關鍵)
                 const p15m = stats[s].pHist.slice(-300);
                 const bgVolat = (Math.max(...p15m) - Math.min(...p15m)) / pNow;
 
@@ -117,8 +113,8 @@
                 const vacScore = (range5m / v5mSum) * 100000000;
                 const flashRatio = (pNow - (stats[s].pHist[dataLen-20] || stats[s].pHist[0])) / (h24 - l24 || 1);
 
-                // --- 判定核心：黃卡不看 Trend, 只看蓄力噴發 ---
-                const isFlash = (flashRatio >= SETTINGS.VOLAT_RATIO) && (flashRatio > bgVolat * 3) && (vacScore >= SETTINGS.VAC);
+                // 2.2 倍蓄力，更靈敏
+                const isFlash = (flashRatio >= SETTINGS.VOLAT_RATIO) && (flashRatio > bgVolat * 2.2) && (vacScore >= SETTINGS.VAC);
                 const isFuel = (range5m/(h24-l24||1) >= SETTINGS.VOLAT_RATIO) && (pNow > vwap5m) && (!SETTINGS.USE_FUEL || (slope <= SETTINGS.SLP && vacScore >= SETTINGS.VAC));
 
                 const isTriggeredNow = isFlash || isFuel;
@@ -132,11 +128,11 @@
 
                 const timeSinceLast = Date.now() - stats[s].lastTrigger;
                 const isPinned = pinned.has(s), isSearching = currentKeyword && s.includes(currentKeyword);
-
                 if (isTriggeredNow || timeSinceLast < MEMORY || isPinned || isSearching) {
                     results.push({ s, fNow, pNow, slope, vacScore, flashRatio, isTriggered: isTriggeredNow, isFlash, linger: timeSinceLast < MEMORY && !isTriggeredNow, timeLeft: Math.ceil((MEMORY-timeSinceLast)/1000) });
                 }
             });
+            document.getElementById('load_status').innerText = "SYSTEM ACTIVE";
             render(results);
         } catch (e) { console.error(e); }
         isUpdating = false;
@@ -148,7 +144,6 @@
         results.forEach(item => {
             const div = document.createElement('div');
             const isPinned = pinned.has(item.s);
-            // 只要是 Triggered 或 Linger，邊框都要有意義
             const borderClass = item.isFlash ? 'flash-trigger' : (item.isTriggered ? 'hunt-trigger' : '');
             div.className = `card p-4 rounded-xl ${borderClass} ${isPinned ? 'pinned' : ''} ${item.linger ? 'opacity-50' : ''}`;
             div.onclick = () => { isPinned ? pinned.delete(item.s) : pinned.add(item.s); };
@@ -161,10 +156,10 @@
                     <div class="text-right"><div class="text-blue-400 font-black">$${item.pNow.toFixed(item.pNow<1?6:2)}</div></div>
                 </div>
                 <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-white/5 text-[9px] font-bold uppercase">
-                    <div class="text-red-400">SLOPE: ${(item.slope*100).toFixed(1)}%</div>
-                    <div class="${item.isFlash?'text-yellow-400 font-black':'text-zinc-500'}">1M FLASH: ${(item.flashRatio*100).toFixed(1)}%</div>
+                    <div class="text-red-400">SLP: ${(item.slope*100).toFixed(1)}%</div>
+                    <div class="${item.isFlash?'text-yellow-400 font-black':'text-zinc-500'}">FLS: ${(item.flashRatio*100).toFixed(1)}%</div>
                     <div class="text-blue-300">VAC: ${item.vacScore.toFixed(0)}</div>
-                    <div class="text-zinc-500 text-right italic text-[8px]">${item.isTriggered ? '● SIGNAL ACTIVE' : '○ LINGER'}</div>
+                    <div class="text-zinc-500 text-right italic text-[8px]">${item.isTriggered ? '● ACTIVE' : '○ LINGER'}</div>
                 </div>
             `;
             list.appendChild(div);
