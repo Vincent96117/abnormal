@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V5.7.7 - ELITE SORTING</title>
+    <title>⚡ SNIPER V5.7.8 - WAP CROSS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
@@ -20,11 +20,12 @@
         <div class="bg-zinc-900 p-4 rounded-xl mb-4 border border-white/10 shadow-2xl">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex flex-col">
-                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.7.7 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span></h1>
-                    <div class="text-[9px] text-zinc-500 font-bold mt-1 uppercase tracking-widest">Logic: <span class="text-blue-400">Battle Power Sorting</span></div>
+                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.7.8 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span></h1>
+                    <div class="text-[9px] text-zinc-500 font-bold mt-1 uppercase tracking-widest">Logic: <span class="text-yellow-400">WAP Break (Yellow)</span> & <span class="text-purple-400">WAP ±3% (Purple)</span></div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <div id="search_light" class="w-3 h-3 rounded-full bg-zinc-800 transition-all duration-300"></div> <button id="slopeToggle" onclick="toggleFilter('USE_FUEL')" class="bg-black border border-zinc-700 px-3 py-2 rounded-lg font-black text-zinc-400 text-[10px] toggle-active uppercase">⚓ Fuel Mode</button>
+                    <div id="search_light" class="w-3 h-3 rounded-full bg-zinc-800 transition-all duration-300"></div>
+                    <button id="slopeToggle" onclick="toggleFilter('USE_FUEL')" class="bg-black border border-zinc-700 px-3 py-2 rounded-lg font-black text-zinc-400 text-[10px] toggle-active uppercase">⚓ Fuel Mode</button>
                     <input type="text" id="searchInput" onkeydown="handleSearch(event)" placeholder="SYMBOL & ENTER" class="bg-black border-2 border-zinc-800 px-3 py-1 rounded text-blue-400 outline-none w-40 uppercase font-black transition-all">
                 </div>
             </div>
@@ -39,7 +40,7 @@
         <div id="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto pr-2"></div>
     </div>
     <div class="w-72 bg-zinc-950 border-l border-zinc-900 flex flex-col p-4 text-[10px]">
-        <div class="text-zinc-600 font-black mb-4 border-b border-zinc-800 pb-2 uppercase text-center italic">Battle Power Leaderboard</div>
+        <div class="text-zinc-600 font-black mb-4 border-b border-zinc-800 pb-2 uppercase text-center italic">Elite Verification</div>
         <div id="logs" class="flex-1 overflow-y-auto space-y-2"></div>
     </div>
 
@@ -55,17 +56,12 @@
         const light = document.getElementById('search_light');
         if (e.key === 'Enter') {
             currentKeyword = e.target.value.toUpperCase();
-            if (currentKeyword) {
-                light.className = "w-3 h-3 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e] animate-pulse";
-                addLog(`TARGET LOCKED: ${currentKeyword}`, "text-blue-400 font-black uppercase");
-            } else {
-                light.className = "w-3 h-3 rounded-full bg-zinc-800";
-                addLog(`FILTER RELEASED`, "text-zinc-500 font-bold");
-            }
+            light.className = currentKeyword ? "w-3 h-3 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e] animate-pulse" : "w-3 h-3 rounded-full bg-zinc-800";
+            addLog(currentKeyword ? `SEARCH: ${currentKeyword}` : "FILTER OFF", "text-blue-400");
         }
     }
 
-    function toggleFilter(key) { SETTINGS[key] = !SETTINGS[key]; const btn = document.getElementById('slopeToggle'); btn.classList.toggle('toggle-active'); }
+    function toggleFilter(key) { SETTINGS[key] = !SETTINGS[key]; document.getElementById('slopeToggle').classList.toggle('toggle-active'); }
 
     function addLog(msg, color="text-zinc-500") {
         const logs = document.getElementById('logs');
@@ -87,17 +83,27 @@
             ]);
             const fData = await fRes.json(), tData = await tRes.json();
             const tMap = new Map(tData.map(t => [t.symbol, t]));
-            let results = [];
 
+            let results = [];
             fData.forEach(c => {
                 const s = c.symbol;
                 if (!s.endsWith('USDT') || EXCLUDE.includes(s)) return;
                 const ticker = tMap.get(s); if (!ticker) return;
-                const pNow = parseFloat(ticker.lastPrice), fNow = parseFloat(c.lastFundingRate), vNow = parseFloat(ticker.quoteVolume);
+
+                const pNow = parseFloat(ticker.lastPrice);
+                const fNow = parseFloat(c.lastFundingRate);
+                const vNow = parseFloat(ticker.quoteVolume);
+                const wap24h = parseFloat(ticker.weightedAvgPrice);
                 const h24 = parseFloat(ticker.highPrice), l24 = parseFloat(ticker.lowPrice);
-                
-                if (!stats[s]) stats[s] = { lastV: vNow, vDeltas:[], frHist:[], pHist:[], pvDeltas:[], lastTrigger:0, logged:false };
-                
+
+                if (!stats[s]) stats[s] = { lastV: vNow, vDeltas:[], frHist:[], pHist:[], pvDeltas:[], lastTrigger:0, logged:false, lastFR: fNow };
+
+                // 資費正負 0.05 預警
+                if (Math.abs(fNow - stats[s].lastFR) >= 0.0005) {
+                    addLog(`[FR] ${s} ⚡ ${fNow>stats[s].lastFR?'+':'-'}0.05%`, "text-orange-400 font-bold");
+                    stats[s].lastFR = fNow;
+                }
+
                 const vDelta = Math.max(0, vNow - stats[s].lastV);
                 stats[s].lastV = vNow;
                 stats[s].vDeltas.push(vDelta);
@@ -111,42 +117,47 @@
                 const dataLen = stats[s].frHist.length;
                 if (dataLen < 20) return;
 
-                const p5m = stats[s].pHist.slice(-100);
-                const range5m = Math.max(...p5m) - Math.min(...p5m);
                 const v5mSum = Math.max(0.0001, stats[s].vDeltas.slice(-100).reduce((a,b)=>a+b,0));
+                const pv5mSum = stats[s].pvDeltas.slice(-100).reduce((a,b)=>a+b,0);
+                const vwap5m = pv5mSum / v5mSum;
                 const p15m = stats[s].pHist.slice(-300);
                 const bgVolat = p15m.length > 50 ? (Math.max(...p15m) - Math.min(...p15m)) / pNow : 0;
                 
                 const slope = dataLen >= 100 ? (fNow - stats[s].frHist[dataLen-100]) / (Math.abs(stats[s].frHist[dataLen-100]) || 0.0001) : 0;
-                const vacScore = (range5m / v5mSum) * 100000000;
+                const vacScore = ((Math.max(...stats[s].pHist.slice(-100)) - Math.min(...stats[s].pHist.slice(-100))) / v5mSum) * 100000000;
                 const flashRatio = (pNow - (stats[s].pHist[dataLen-20] || stats[s].pHist[0])) / (h24 - l24 || 1);
 
-                // --- 獨立閥門判定 ---
-                const isFlash = (flashRatio >= SETTINGS.FLASH_RATIO) && (bgVolat === 0 || flashRatio > bgVolat * 2.2) && (vacScore >= SETTINGS.VAC);
+                // --- 核心改動邏輯 ---
+                const distToWap = (pNow - wap24h) / wap24h;
                 
-                const isFuelEarly = (slope <= SETTINGS.SLP * 1.5) && (vacScore >= SETTINGS.VAC * 1.2);
-                const isFuelTrad = (range5m/(h24-l24||1) >= SETTINGS.FUEL_RATIO) && (slope <= SETTINGS.SLP && vacScore >= SETTINGS.VAC);
-                const isFuel = SETTINGS.USE_FUEL && (isFuelEarly || isFuelTrad);
+                // 黃卡: 突破 WAP + 短線站穩 VWAP
+                const isFlash = (flashRatio >= SETTINGS.FLASH_RATIO) && (flashRatio > bgVolat * 2.2) && (vacScore >= SETTINGS.VAC) && (pNow > wap24h) && (pNow > vwap5m);
+                
+                // 紫卡: WAP ±3% 蓄力 + 短線站穩 VWAP
+                const inWapRange = Math.abs(distToWap) <= 0.03;
+                const isFuel = SETTINGS.USE_FUEL && (slope <= SETTINGS.SLP) && (vacScore >= SETTINGS.VAC) && inWapRange && (pNow > vwap5m);
 
                 const isTriggeredNow = isFlash || isFuel;
-                
-                // 計算「戰力值」用於排序: 爆發力(50%) + 真空(30%) + 資費(20%)
                 const power = (flashRatio * 500) + (vacScore / 10) - (slope * 100);
 
                 if (isTriggeredNow) {
                     stats[s].lastTrigger = Date.now();
                     if (!stats[s].logged) {
-                        addLog(`${isFlash?'⚡':'🎯'} ${s} POWER:${power.toFixed(0)}`, isFlash?"text-yellow-400":"text-purple-400 font-bold");
+                        addLog(`${isFlash?'⚡':'🎯'} ${s} POWER:${power.toFixed(0)}`, isFlash?"text-yellow-400":"text-purple-400");
                         stats[s].logged = true;
                     }
                 } else { stats[s].logged = false; }
 
                 const timeSinceLast = Date.now() - stats[s].lastTrigger;
                 const isPinned = pinned.has(s), isSearching = currentKeyword && s.includes(currentKeyword);
+                
                 if (isTriggeredNow || timeSinceLast < MEMORY || isPinned || isSearching) {
-                    results.push({ s, fNow, pNow, slope, vacScore, flashRatio, power, isTriggered: isTriggeredNow, isFlash, linger: timeSinceLast < MEMORY && !isTriggeredNow, timeLeft: Math.ceil((MEMORY-timeSinceLast)/1000) });
+                    results.push({ s, fNow, pNow, slope, vacScore, flashRatio, power, isFlash, wap24h, vwap5m, distToWap, isTriggered: isTriggeredNow, linger: timeSinceLast < MEMORY && !isTriggeredNow, timeLeft: Math.ceil((MEMORY-timeSinceLast)/1000) });
                 }
             });
+
+            // 戰力排序置頂
+            results.sort((a,b) => (pinned.has(b.s) - pinned.has(a.s)) || (b.isTriggered - a.isTriggered) || (b.power - a.power));
             render(results);
         } catch (e) { console.error(e); }
         isUpdating = false;
@@ -154,32 +165,28 @@
 
     function render(results) {
         const list = document.getElementById('list'); list.innerHTML = '';
-        // 排序優先級：置頂 > 戰力值(Power) > 殘留
-        results.sort((a,b) => (pinned.has(b.s) - pinned.has(a.s)) || (b.isTriggered - a.isTriggered) || (b.power - a.power));
-        
         results.forEach((item, idx) => {
-            const div = document.createElement('div');
             const isPinned = pinned.has(item.s);
-            const borderClass = (item.isTriggered && item.isFlash) ? 'flash-trigger' : (item.isTriggered ? 'hunt-trigger' : '');
-            div.className = `card p-4 rounded-xl ${borderClass} ${isPinned ? 'pinned' : ''} ${item.linger ? 'opacity-40 scale-95' : ''}`;
+            const div = document.createElement('div');
+            div.className = `card p-4 rounded-xl ${item.isTriggered ? (item.isFlash?'flash-trigger':'hunt-trigger') : ''} ${isPinned?'pinned':''} ${item.linger?'opacity-40 scale-95':''}`;
             div.onclick = () => { isPinned ? pinned.delete(item.s) : pinned.add(item.s); };
             div.innerHTML = `
                 ${item.isTriggered ? `<div class="rank-badge">TOP ${idx+1}</div>` : ''}
                 <div class="flex justify-between items-start">
                     <div>
-                        <div class="text-white font-black text-lg">${isPinned?'📌':''} ${item.s.replace('USDT','')} ${item.linger ? `<span class="text-yellow-500 text-[9px] italic"> ${item.timeLeft}s</span>` : ''}</div>
-                        <div class="text-[9px] text-zinc-500">FR: ${(item.fNow*100).toFixed(4)}%</div>
+                        <div class="text-white font-black text-lg">${isPinned?'📌':''} ${item.s.replace('USDT','')}</div>
+                        <div class="text-[9px] text-zinc-500 font-bold">WAP: ${item.wap24h.toFixed(item.wap24h<1?6:2)} (<span class="${item.distToWap>=0?'text-green-500':'text-red-500'}">${(item.distToWap*100).toFixed(1)}%</span>)</div>
                     </div>
                     <div class="text-right">
                         <div class="text-blue-400 font-black text-sm">$${item.pNow.toFixed(item.pNow<1?6:2)}</div>
-                        <div class="text-[8px] text-zinc-600 font-bold">POWER: ${item.power.toFixed(0)}</div>
+                        <div class="text-[8px] text-zinc-600 font-bold uppercase">Power: ${item.power.toFixed(0)}</div>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-white/5 text-[9px] font-bold uppercase">
                     <div class="text-red-400">SLP: ${(item.slope*100).toFixed(1)}%</div>
                     <div class="${item.isFlash?'text-yellow-400':'text-zinc-500'}">FLS: ${(item.flashRatio*100).toFixed(1)}%</div>
                     <div class="text-blue-300">VAC: ${item.vacScore.toFixed(0)}</div>
-                    <div class="text-zinc-500 text-right italic text-[8px]">${item.isTriggered ? '● ACTIVE' : '○ LINGER'}</div>
+                    <div class="text-zinc-500 text-right italic text-[8px]">${item.isTriggered ? (item.isFlash?'FLASH':'FUEL') : 'LINGER '+item.timeLeft+'s'}</div>
                 </div>
             `;
             list.appendChild(div);
