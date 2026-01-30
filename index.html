@@ -1,19 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V5.6.6 - SUB-CARD FIXED</title>
+    <title>⚡ SNIPER V5.6.7 - 1H VWAP FILTER</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
         .card { background: #0a0a0a; border: 1px solid #1a3a1a; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        /* 紫卡動畫 */
         .hunt-trigger { border: 2px solid #a855f7 !important; background: #1e1b4b !important; animation: pulse-purple 2s infinite; }
-        /* 黃卡動畫 (閃電) */
         .flash-trigger { border: 2px solid #facc15 !important; background: #422006 !important; animation: pulse-yellow 1s infinite; }
         .pinned { border: 2px solid #3b82f6 !important; background: #081221 !important; }
         @keyframes pulse-purple { 0%, 100% { box-shadow: 0 0 5px #a855f7; } 50% { box-shadow: 0 0 20px #a855f7; } }
         @keyframes pulse-yellow { 0%, 100% { box-shadow: 0 0 5px #facc15; } 50% { box-shadow: 0 0 20px #facc15; } }
-        .toggle-active { background: #ef4444 !important; color: white !important; border-color: white !important; }
+        .toggle-active { background: #ef4444 !important; color: white !important; }
         .push-active { background: #facc15 !important; color: black !important; font-weight: 900; }
     </style>
 </head>
@@ -23,7 +21,7 @@
             <div class="flex justify-between items-center mb-4">
                 <div class="flex flex-col">
                     <h1 class="text-xl font-black text-blue-500 italic uppercase flex items-center gap-2">
-                        ⚡ Sniper V5.6.6 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
+                        ⚡ Sniper V5.6.7 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
                     </h1>
                     <div id="status" class="text-[9px] text-zinc-500 font-bold mt-1 uppercase tracking-widest">
                         Monitoring: <span id="count_all" class="text-white">0</span> | Warming: <span id="count_warm" class="text-yellow-500">0</span>
@@ -55,15 +53,16 @@
         <div id="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto pr-2"></div>
     </div>
 
-    <div class="w-72 bg-zinc-950 border-l border-zinc-900 flex flex-col p-4">
-        <div class="text-zinc-600 font-black mb-4 border-b border-zinc-800 pb-2 uppercase text-[10px]">System Logs</div>
-        <div id="logs" class="flex-1 overflow-y-auto space-y-2 font-mono text-[10px]"></div>
+    <div class="w-72 bg-zinc-950 border-l border-zinc-900 flex flex-col p-4 text-[10px]">
+        <div class="text-zinc-600 font-black mb-4 border-b border-zinc-800 pb-2 uppercase">System Logs</div>
+        <div id="logs" class="flex-1 overflow-y-auto space-y-2"></div>
     </div>
 
 <script>
     const P_USER = "Gkhqyhobnxzjfwgvaiyp347m1jkhn4", P_TOKEN = "acyoe3sz15x4n91r1349fdcau7x6pw";
     const EXCLUDE = ['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT','BNBUSDT','BNXUSDT'];
-    const DEPTH = 100, MEMORY = 180000; 
+    const DEPTH = 1200; // 提升深度以支持 1H VWAP (3秒一跳 * 1200 = 3600秒)
+    const MEMORY = 180000; 
     
     let stats = {}, pinned = new Set();
     let SETTINGS = { SLP: -0.025, VOLAT_RATIO: 0.15, VAC: 80, USE_FUEL: true, PUSH_ON: false };
@@ -71,7 +70,7 @@
 
     function toggleFilter(key) { SETTINGS[key] = !SETTINGS[key]; const btn = document.getElementById('slopeToggle'); btn.classList.toggle('toggle-active'); btn.innerText = `⚓ Fuel Filter: ${SETTINGS[key]?'ON':'OFF'}`; }
     function togglePush() { SETTINGS.PUSH_ON = !SETTINGS.PUSH_ON; const btn = document.getElementById('pushToggle'); btn.classList.toggle('push-active'); btn.innerText = `📳 Push: ${SETTINGS.PUSH_ON?'ON':'OFF'}`; }
-    async function testPush() { await fetch('https://api.pushover.net/1/messages.json',{method:'POST',body:new URLSearchParams({token:P_TOKEN,user:P_USER,title:"⚡ SNIPER TEST",message:"V5.6.6 Sub-card Ready!",sound:'alien'})}); }
+    async function testPush() { await fetch('https://api.pushover.net/1/messages.json',{method:'POST',body:new URLSearchParams({token:P_TOKEN,user:P_USER,title:"⚡ SNIPER TEST",message:"V5.6.7 Trend Guard Ready!",sound:'alien'})}); }
 
     function addLog(msg, color="text-zinc-500") {
         const logs = document.getElementById('logs');
@@ -108,47 +107,55 @@
                 stats[s].vHist.push(vNow); stats[s].frHist.push(fNow); stats[s].pHist.push(pNow); stats[s].pvHist.push(pNow * vDelta);
                 if (stats[s].vHist.length > DEPTH) { stats[s].vHist.shift(); stats[s].frHist.shift(); stats[s].pHist.shift(); stats[s].pvHist.shift(); }
 
-                const isWarmed = stats[s].frHist.length >= DEPTH;
-                if (!isWarmed) wCount++;
+                const isWarmed = stats[s].frHist.length >= 100; // 基礎熱機仍為 5 分鐘
+                if (stats[s].frHist.length < 100) wCount++;
                 const isPinned = pinned.has(s), isSearching = keyword && s.includes(keyword);
 
                 if (isSearching || isPinned) {
-                    let item = { s, fNow, pNow, zonePrice:(h24+l24)/2, warming: !isWarmed, isPinned, isSearching };
-                    results.push(item);
+                    results.push({ s, fNow, pNow, zonePrice:(h24+l24)/2, warming: !isWarmed, isPinned, isSearching });
                 }
                 if (!isWarmed) return;
 
-                const slope = (fNow - stats[s].frHist[0]) / (Math.abs(stats[s].frHist[0]) || 0.0001);
-                const pMax = Math.max(...stats[s].pHist), pMin = Math.min(...stats[s].pHist);
+                // 數據窗口計算
+                const slope = (fNow - stats[s].frHist[Math.max(0, stats[s].frHist.length-100)]) / (Math.abs(stats[s].frHist[Math.max(0, stats[s].frHist.length-100)]) || 0.0001);
+                const p5m = stats[s].pHist.slice(-100);
+                const pMax = Math.max(...p5m), pMin = Math.min(...p5m);
                 const range5m = pMax - pMin;
                 const volatProp = range5m / (h24 - l24 || 1);
-                const totalV = stats[s].vHist[stats[s].vHist.length-1] - stats[s].vHist[0];
-                const vacScore = (range5m / (Math.abs(totalV) || 1)) * 100000000;
-                const vwap5m = stats[s].pvHist.reduce((a,b)=>a+b,0) / (stats[s].vHist.reduce((a,b)=>a+b,0)-stats[s].vHist[0] || 1);
+                const totalV5m = stats[s].vHist[stats[s].vHist.length-1] - stats[s].vHist[stats[s].vHist.length-100];
+                const vacScore = (range5m / (Math.abs(totalV5m) || 1)) * 100000000;
                 
+                // VWAP 計算 (5m 與 1h)
+                const vwap5m = stats[s].pvHist.slice(-100).reduce((a,b)=>a+b,0) / (stats[s].vHist.slice(-100).reduce((a,b,i,arr)=>a+(i===0?0:b-arr[i-1]),0) || 1);
+                const vwap1h = stats[s].pvHist.reduce((a,b)=>a+b,0) / (stats[s].vHist.reduce((a,b,i,arr)=>a+(i===0?0:b-arr[i-1]),0) || 1);
+
+                // 1分鐘閃電 (20筆數據)
                 const p1m = stats[s].pHist[stats[s].pHist.length - 20] || stats[s].pHist[0];
                 const flashRatio = (pNow - p1m) / (h24 - l24 || 1);
 
+                // 判定條件
                 const gateA = volatProp >= SETTINGS.VOLAT_RATIO;
                 const gateB = pNow > vwap5m;
                 const gateC = !SETTINGS.USE_FUEL || (slope <= SETTINGS.SLP && vacScore >= SETTINGS.VAC);
-                const gateFlash = flashRatio >= SETTINGS.VOLAT_RATIO;
+                
+                // --- 關鍵修正：黃卡閃電必須高於 1 小時 VWAP ---
+                const gateFlash = (flashRatio >= SETTINGS.VOLAT_RATIO) && (pNow > vwap1h);
 
                 const isTriggeredNow = (gateA && gateB && gateC) || gateFlash;
                 if (isTriggeredNow) {
                     stats[s].lastTrigger = Date.now();
                     if (!stats[s].logged) {
                         const type = gateFlash ? "⚡ 閃電" : "🎯 爆發";
-                        addLog(`${type}: ${s}`, gateFlash ? "text-yellow-400 font-black" : "text-purple-400 font-bold");
+                        addLog(`${type}: ${s} (1h Trend OK)`, gateFlash ? "text-yellow-400 font-black" : "text-purple-400 font-bold");
                         stats[s].logged = true;
-                        if(SETTINGS.PUSH_ON) fetch('https://api.pushover.net/1/messages.json',{method:'POST',body:new URLSearchParams({token:P_TOKEN,user:P_USER,title:`${type}: ${s}`,message:`1m:${(flashRatio*100).toFixed(1)}% | 價:${pNow}`,sound:'alien'})});
+                        if(SETTINGS.PUSH_ON) fetch('https://api.pushover.net/1/messages.json',{method:'POST',body:new URLSearchParams({token:P_TOKEN,user:P_USER,title:`${type}: ${s}`,message:`1m:${(flashRatio*100).toFixed(1)}% | 1h VWAP支撐`,sound:'alien'})});
                     }
                 } else { stats[s].logged = false; }
 
                 const timeSinceLast = Date.now() - stats[s].lastTrigger;
                 if (!results.find(r => r.s === s)) {
                     if (isTriggeredNow || timeSinceLast < MEMORY) {
-                        results.push({ s, fNow, pNow, slope, vacScore, volatProp, flashRatio, vwap5m, zonePrice:(h24+l24)/2, isTriggered: isTriggeredNow, isFlash: gateFlash, linger: timeSinceLast < MEMORY, warming:false, timeLeft: Math.ceil((MEMORY-timeSinceLast)/1000) });
+                        results.push({ s, fNow, pNow, slope, vacScore, volatProp, flashRatio, isTriggered: isTriggeredNow, isFlash: gateFlash, linger: timeSinceLast < MEMORY, warming:false, timeLeft: Math.ceil((MEMORY-timeSinceLast)/1000), above1h: pNow > vwap1h });
                     }
                 }
                 stats[s].p = pNow; stats[s].v = vNow;
@@ -166,7 +173,6 @@
         results.forEach(item => {
             const div = document.createElement('div');
             const isPinned = pinned.has(item.s);
-            // 決定卡片邊框色
             const borderClass = item.isFlash ? 'flash-trigger' : (item.isTriggered ? 'hunt-trigger' : '');
             div.className = `card p-4 rounded-xl ${borderClass} ${isPinned ? 'pinned' : ''}`;
             div.onclick = () => { isPinned ? pinned.delete(item.s) : pinned.add(item.s); };
@@ -185,15 +191,14 @@
                     <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-white/5 text-[9px]">
                         <div class="text-red-400">SLOPE: ${item.slope ? (item.slope*100).toFixed(1) : '0.0'}%</div>
                         <div class="${item.isFlash ? 'text-yellow-400 font-black' : 'text-zinc-500'}">1M FLASH: ${item.flashRatio ? (item.flashRatio*100).toFixed(1) : '0.0'}%</div>
-                        <div class="text-blue-300 font-bold">VACUUM: ${item.vacScore ? item.vacScore.toFixed(0) : '0'}</div>
-                        <div class="${item.pNow > item.vwap5m ? 'text-green-400':'text-zinc-500'} font-bold text-right italic">VWAP OK</div>
+                        <div class="text-blue-300 font-bold">VAC: ${item.vacScore ? item.vacScore.toFixed(0) : '0'}</div>
+                        <div class="${item.above1h ? 'text-green-400':'text-red-500'} font-bold text-right italic">1H TREND: ${item.above1h ? 'UP' : 'DOWN'}</div>
                     </div>
                 `}
             `;
             list.appendChild(div);
         });
     }
-
     setInterval(update, 3000);
     document.getElementById('slp_range').oninput = function() { SETTINGS.SLP = this.value/1000; document.getElementById('slp_val').innerText = (this.value/10).toFixed(1)+'%'; };
     document.getElementById('volat_range').oninput = function() { SETTINGS.VOLAT_RATIO = this.value/100; document.getElementById('volat_val').innerText = this.value+'%'; };
