@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V5.7.5 - INSTANT BOOT</title>
+    <title>⚡ SNIPER V5.7.7 - ELITE SORTING</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
-        .card { background: #0a0a0a; border: 1px solid #1a3a1a; cursor: pointer; transition: all 0.3s; }
-        .hunt-trigger { border: 2px solid #a855f7 !important; background: #1e1b4b !important; animation: pulse-purple 1.5s infinite; }
-        .flash-trigger { border: 2px solid #facc15 !important; background: #422006 !important; animation: pulse-yellow 0.8s infinite; }
+        .card { background: #0a0a0a; border: 1px solid #1a3a1a; cursor: pointer; transition: all 0.3s; position: relative; }
+        .hunt-trigger { border: 2px solid #a855f7 !important; background: #1e1b4b !important; animation: pulse-purple 1.5s infinite; z-index: 10; }
+        .flash-trigger { border: 2px solid #facc15 !important; background: #422006 !important; animation: pulse-yellow 0.8s infinite; z-index: 10; }
         .pinned { border: 2px solid #3b82f6 !important; background: #081221 !important; }
-        @keyframes pulse-purple { 0%, 100% { box-shadow: 0 0 5px #a855f7; } 50% { box-shadow: 0 0 20px #a855f7; } }
-        @keyframes pulse-yellow { 0%, 100% { box-shadow: 0 0 5px #facc15; } 50% { box-shadow: 0 0 20px #facc15; } }
+        @keyframes pulse-purple { 0%, 100% { box-shadow: 0 0 10px #a855f7; } 50% { box-shadow: 0 0 25px #a855f7; } }
+        @keyframes pulse-yellow { 0%, 100% { box-shadow: 0 0 10px #facc15; } 50% { box-shadow: 0 0 25px #facc15; } }
         .toggle-active { background: #ef4444 !important; color: white !important; }
+        .rank-badge { position: absolute; top: -5px; left: -5px; background: #3b82f6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 8px; font-weight: 900; z-index: 20; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden text-[11px]">
@@ -19,24 +20,26 @@
         <div class="bg-zinc-900 p-4 rounded-xl mb-4 border border-white/10 shadow-2xl">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex flex-col">
-                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.7.5 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span></h1>
-                    <div class="text-[9px] text-zinc-500 font-bold mt-1 uppercase tracking-widest">Status: <span id="load_status" class="text-white">WARMING (0s)</span></div>
+                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.7.7 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span></h1>
+                    <div class="text-[9px] text-zinc-500 font-bold mt-1 uppercase tracking-widest">Logic: <span class="text-blue-400">Battle Power Sorting</span></div>
                 </div>
-                <div class="flex gap-2">
-                    <button id="slopeToggle" onclick="toggleFilter('USE_FUEL')" class="bg-black border border-zinc-700 px-3 py-2 rounded-lg font-black text-zinc-400 text-[10px] toggle-active">⚓ Fuel Filter: ON</button>
+                <div class="flex items-center gap-3">
+                    <div id="search_light" class="w-3 h-3 rounded-full bg-zinc-800 transition-all duration-300"></div> <button id="slopeToggle" onclick="toggleFilter('USE_FUEL')" class="bg-black border border-zinc-700 px-3 py-2 rounded-lg font-black text-zinc-400 text-[10px] toggle-active uppercase">⚓ Fuel Mode</button>
                     <input type="text" id="searchInput" onkeydown="handleSearch(event)" placeholder="SYMBOL & ENTER" class="bg-black border-2 border-zinc-800 px-3 py-1 rounded text-blue-400 outline-none w-40 uppercase font-black transition-all">
                 </div>
             </div>
-            <div class="grid grid-cols-3 gap-6 font-black uppercase">
-                <div class="space-y-1"><div class="flex justify-between text-red-500"><span>📉 Slope Limit</span><span id="slp_val">-2.5%</span></div><input type="range" id="slp_range" min="-800" max="0" value="-25" class="w-full h-1 bg-zinc-800 appearance-none cursor-pointer"></div>
-                <div class="space-y-1"><div class="flex justify-between text-yellow-500"><span>🔥 Volat / Flash</span><span id="volat_val">15%</span></div><input type="range" id="volat_range" min="1" max="50" value="15" class="w-full h-1 bg-zinc-800 appearance-none cursor-pointer"></div>
-                <div class="space-y-1"><div class="flex justify-between text-blue-400"><span>💎 Vacuum Score</span><span id="vac_val">80</span></div><input type="range" id="vac_range" min="10" max="500" value="80" class="w-full h-1 bg-zinc-800 appearance-none cursor-pointer"></div>
+            
+            <div class="grid grid-cols-4 gap-4 font-black uppercase">
+                <div class="space-y-1"><div class="flex justify-between text-red-500"><span>📉 Slope</span><span id="slp_val">-2.5%</span></div><input type="range" id="slp_range" min="-800" max="0" value="-25" class="w-full h-1 bg-zinc-800 appearance-none cursor-pointer"></div>
+                <div class="space-y-1"><div class="flex justify-between text-yellow-400"><span>⚡ Flash Threshold</span><span id="flash_val">15%</span></div><input type="range" id="flash_range" min="1" max="60" value="15" class="w-full h-1 bg-zinc-800 appearance-none cursor-pointer"></div>
+                <div class="space-y-1"><div class="flex justify-between text-purple-400"><span>🎯 Fuel Threshold</span><span id="fuel_val">10%</span></div><input type="range" id="fuel_range" min="1" max="60" value="10" class="w-full h-1 bg-zinc-800 appearance-none cursor-pointer"></div>
+                <div class="space-y-1"><div class="flex justify-between text-blue-400"><span>💎 Vac Limit</span><span id="vac_val">80</span></div><input type="range" id="vac_range" min="10" max="500" value="80" class="w-full h-1 bg-zinc-800 appearance-none cursor-pointer"></div>
             </div>
         </div>
         <div id="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto pr-2"></div>
     </div>
     <div class="w-72 bg-zinc-950 border-l border-zinc-900 flex flex-col p-4 text-[10px]">
-        <div class="text-zinc-600 font-black mb-4 border-b border-zinc-800 pb-2 uppercase text-center italic">Live Signals</div>
+        <div class="text-zinc-600 font-black mb-4 border-b border-zinc-800 pb-2 uppercase text-center italic">Battle Power Leaderboard</div>
         <div id="logs" class="flex-1 overflow-y-auto space-y-2"></div>
     </div>
 
@@ -45,18 +48,24 @@
     const EXCLUDE = ['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT','BNBUSDT','BNXUSDT'];
     const DEPTH = 1200, MEMORY = 180000; 
     let stats = {}, pinned = new Set(), currentKeyword = "";
-    let SETTINGS = { SLP: -0.025, VOLAT_RATIO: 0.15, VAC: 80, USE_FUEL: true };
-    let isUpdating = false, bootTime = Date.now();
+    let SETTINGS = { SLP: -0.025, FLASH_RATIO: 0.15, FUEL_RATIO: 0.10, VAC: 80, USE_FUEL: true };
+    let isUpdating = false;
 
     function handleSearch(e) {
+        const light = document.getElementById('search_light');
         if (e.key === 'Enter') {
             currentKeyword = e.target.value.toUpperCase();
-            e.target.style.borderColor = currentKeyword ? '#3b82f6' : '#27272a';
-            addLog(`SEARCH: ${currentKeyword || 'ALL'}`, "text-blue-400 font-black");
+            if (currentKeyword) {
+                light.className = "w-3 h-3 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e] animate-pulse";
+                addLog(`TARGET LOCKED: ${currentKeyword}`, "text-blue-400 font-black uppercase");
+            } else {
+                light.className = "w-3 h-3 rounded-full bg-zinc-800";
+                addLog(`FILTER RELEASED`, "text-zinc-500 font-bold");
+            }
         }
     }
 
-    function toggleFilter(key) { SETTINGS[key] = !SETTINGS[key]; const btn = document.getElementById('slopeToggle'); btn.classList.toggle('toggle-active'); btn.innerText = `⚓ Fuel Filter: ${SETTINGS[key]?'ON':'OFF'}`; }
+    function toggleFilter(key) { SETTINGS[key] = !SETTINGS[key]; const btn = document.getElementById('slopeToggle'); btn.classList.toggle('toggle-active'); }
 
     function addLog(msg, color="text-zinc-500") {
         const logs = document.getElementById('logs');
@@ -71,9 +80,6 @@
         if (isUpdating) return;
         isUpdating = true;
         document.getElementById('heartbeat').classList.toggle('opacity-0');
-        const elapsed = Math.floor((Date.now() - bootTime)/1000);
-        document.getElementById('load_status').innerText = elapsed < 60 ? `WARMING (${elapsed}s)` : "SYSTEM ACTIVE";
-
         try {
             const [fRes, tRes] = await Promise.all([
                 fetch('https://fapi.binance.com/fapi/v1/premiumIndex'),
@@ -103,30 +109,34 @@
                 }
 
                 const dataLen = stats[s].frHist.length;
-                if (dataLen < 20) return; // 只要 1 分鐘數據就開始運算
+                if (dataLen < 20) return;
 
                 const p5m = stats[s].pHist.slice(-100);
                 const range5m = Math.max(...p5m) - Math.min(...p5m);
                 const v5mSum = Math.max(0.0001, stats[s].vDeltas.slice(-100).reduce((a,b)=>a+b,0));
-                const vwap5m = stats[s].pvDeltas.slice(-100).reduce((a,b)=>a+b,0) / v5mSum;
-                
-                // 背景波動計算保護
                 const p15m = stats[s].pHist.slice(-300);
                 const bgVolat = p15m.length > 50 ? (Math.max(...p15m) - Math.min(...p15m)) / pNow : 0;
-
+                
                 const slope = dataLen >= 100 ? (fNow - stats[s].frHist[dataLen-100]) / (Math.abs(stats[s].frHist[dataLen-100]) || 0.0001) : 0;
                 const vacScore = (range5m / v5mSum) * 100000000;
                 const flashRatio = (pNow - (stats[s].pHist[dataLen-20] || stats[s].pHist[0])) / (h24 - l24 || 1);
 
-                // --- 判定邏輯 (子卡不動，黃卡蓄力) ---
-                const isFlash = (flashRatio >= SETTINGS.VOLAT_RATIO) && (bgVolat === 0 || flashRatio > bgVolat * 2.2) && (vacScore >= SETTINGS.VAC);
-                const isFuel = (range5m/(h24-l24||1) >= SETTINGS.VOLAT_RATIO) && (pNow > vwap5m) && (!SETTINGS.USE_FUEL || (slope <= SETTINGS.SLP && vacScore >= SETTINGS.VAC));
+                // --- 獨立閥門判定 ---
+                const isFlash = (flashRatio >= SETTINGS.FLASH_RATIO) && (bgVolat === 0 || flashRatio > bgVolat * 2.2) && (vacScore >= SETTINGS.VAC);
+                
+                const isFuelEarly = (slope <= SETTINGS.SLP * 1.5) && (vacScore >= SETTINGS.VAC * 1.2);
+                const isFuelTrad = (range5m/(h24-l24||1) >= SETTINGS.FUEL_RATIO) && (slope <= SETTINGS.SLP && vacScore >= SETTINGS.VAC);
+                const isFuel = SETTINGS.USE_FUEL && (isFuelEarly || isFuelTrad);
 
                 const isTriggeredNow = isFlash || isFuel;
+                
+                // 計算「戰力值」用於排序: 爆發力(50%) + 真空(30%) + 資費(20%)
+                const power = (flashRatio * 500) + (vacScore / 10) - (slope * 100);
+
                 if (isTriggeredNow) {
                     stats[s].lastTrigger = Date.now();
                     if (!stats[s].logged) {
-                        addLog(`${isFlash?'⚡':'🎯'} ${s}`, isFlash ? "text-yellow-400 font-black" : "text-purple-400 font-bold");
+                        addLog(`${isFlash?'⚡':'🎯'} ${s} POWER:${power.toFixed(0)}`, isFlash?"text-yellow-400":"text-purple-400 font-bold");
                         stats[s].logged = true;
                     }
                 } else { stats[s].logged = false; }
@@ -134,7 +144,7 @@
                 const timeSinceLast = Date.now() - stats[s].lastTrigger;
                 const isPinned = pinned.has(s), isSearching = currentKeyword && s.includes(currentKeyword);
                 if (isTriggeredNow || timeSinceLast < MEMORY || isPinned || isSearching) {
-                    results.push({ s, fNow, pNow, slope, vacScore, flashRatio, isTriggered: isTriggeredNow, isFlash, linger: timeSinceLast < MEMORY && !isTriggeredNow, timeLeft: Math.ceil((MEMORY-timeSinceLast)/1000) });
+                    results.push({ s, fNow, pNow, slope, vacScore, flashRatio, power, isTriggered: isTriggeredNow, isFlash, linger: timeSinceLast < MEMORY && !isTriggeredNow, timeLeft: Math.ceil((MEMORY-timeSinceLast)/1000) });
                 }
             });
             render(results);
@@ -144,24 +154,30 @@
 
     function render(results) {
         const list = document.getElementById('list'); list.innerHTML = '';
-        results.sort((a,b) => (pinned.has(b.s) - pinned.has(a.s)) || (a.linger - b.linger) || (b.isTriggered - a.isTriggered));
-        results.forEach(item => {
+        // 排序優先級：置頂 > 戰力值(Power) > 殘留
+        results.sort((a,b) => (pinned.has(b.s) - pinned.has(a.s)) || (b.isTriggered - a.isTriggered) || (b.power - a.power));
+        
+        results.forEach((item, idx) => {
             const div = document.createElement('div');
             const isPinned = pinned.has(item.s);
-            const borderClass = item.isFlash ? 'flash-trigger' : (item.isTriggered ? 'hunt-trigger' : '');
-            div.className = `card p-4 rounded-xl ${borderClass} ${isPinned ? 'pinned' : ''} ${item.linger ? 'opacity-50' : ''}`;
+            const borderClass = (item.isTriggered && item.isFlash) ? 'flash-trigger' : (item.isTriggered ? 'hunt-trigger' : '');
+            div.className = `card p-4 rounded-xl ${borderClass} ${isPinned ? 'pinned' : ''} ${item.linger ? 'opacity-40 scale-95' : ''}`;
             div.onclick = () => { isPinned ? pinned.delete(item.s) : pinned.add(item.s); };
             div.innerHTML = `
+                ${item.isTriggered ? `<div class="rank-badge">TOP ${idx+1}</div>` : ''}
                 <div class="flex justify-between items-start">
                     <div>
-                        <div class="text-white font-black text-lg">${isPinned?'📌':''} ${item.s.replace('USDT','')} ${item.linger ? `<span class="text-yellow-500 text-[10px] ml-2 italic">⏳ ${item.timeLeft}s</span>` : ''}</div>
-                        <div class="text-[10px] text-zinc-500 font-bold">FR: ${(item.fNow*100).toFixed(4)}%</div>
+                        <div class="text-white font-black text-lg">${isPinned?'📌':''} ${item.s.replace('USDT','')} ${item.linger ? `<span class="text-yellow-500 text-[9px] italic"> ${item.timeLeft}s</span>` : ''}</div>
+                        <div class="text-[9px] text-zinc-500">FR: ${(item.fNow*100).toFixed(4)}%</div>
                     </div>
-                    <div class="text-right"><div class="text-blue-400 font-black">$${item.pNow.toFixed(item.pNow<1?6:2)}</div></div>
+                    <div class="text-right">
+                        <div class="text-blue-400 font-black text-sm">$${item.pNow.toFixed(item.pNow<1?6:2)}</div>
+                        <div class="text-[8px] text-zinc-600 font-bold">POWER: ${item.power.toFixed(0)}</div>
+                    </div>
                 </div>
                 <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-white/5 text-[9px] font-bold uppercase">
                     <div class="text-red-400">SLP: ${(item.slope*100).toFixed(1)}%</div>
-                    <div class="${item.isFlash?'text-yellow-400 font-black':'text-zinc-500'}">FLS: ${(item.flashRatio*100).toFixed(1)}%</div>
+                    <div class="${item.isFlash?'text-yellow-400':'text-zinc-500'}">FLS: ${(item.flashRatio*100).toFixed(1)}%</div>
                     <div class="text-blue-300">VAC: ${item.vacScore.toFixed(0)}</div>
                     <div class="text-zinc-500 text-right italic text-[8px]">${item.isTriggered ? '● ACTIVE' : '○ LINGER'}</div>
                 </div>
@@ -172,7 +188,8 @@
 
     setInterval(update, 3000);
     document.getElementById('slp_range').oninput = function() { SETTINGS.SLP = this.value/1000; document.getElementById('slp_val').innerText = (this.value/10).toFixed(1)+'%'; };
-    document.getElementById('volat_range').oninput = function() { SETTINGS.VOLAT_RATIO = this.value/100; document.getElementById('volat_val').innerText = this.value+'%'; };
+    document.getElementById('flash_range').oninput = function() { SETTINGS.FLASH_RATIO = this.value/100; document.getElementById('flash_val').innerText = this.value+'%'; };
+    document.getElementById('fuel_range').oninput = function() { SETTINGS.FUEL_RATIO = this.value/100; document.getElementById('fuel_val').innerText = this.value+'%'; };
     document.getElementById('vac_range').oninput = function() { SETTINGS.VAC = parseInt(this.value); document.getElementById('vac_val').innerText = this.value; };
 </script>
 </body>
