@@ -1,20 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V5.6.9 - ALGO FINAL CALIBRATED</title>
+    <title>⚡ SNIPER V5.7.1 - NO MORE FAKES</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
-        .card { background: #0a0a0a; border: 1px solid #1a3a1a; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .card { background: #0a0a0a; border: 1px solid #1a3a1a; cursor: pointer; transition: all 0.3s; }
         .hunt-trigger { border: 2px solid #a855f7 !important; background: #1e1b4b !important; animation: pulse-purple 2s infinite; }
         .flash-trigger { border: 2px solid #facc15 !important; background: #422006 !important; animation: pulse-yellow 1s infinite; }
         .pinned { border: 2px solid #3b82f6 !important; background: #081221 !important; }
-        @keyframes pulse-purple { 0%, 100% { box-shadow: 0 0 5px #a855f7; } 50% { box-shadow: 0 0 20px #a855f7; } }
-        @keyframes pulse-yellow { 0%, 100% { box-shadow: 0 0 5px #facc15; } 50% { box-shadow: 0 0 20px #facc15; } }
+        @keyframes pulse-purple { 0%, 100% { box-shadow: 0 0 5px #a855f7; } 50% { box-shadow: 0 0 15px #a855f7; } }
+        @keyframes pulse-yellow { 0%, 100% { box-shadow: 0 0 5px #facc15; } 50% { box-shadow: 0 0 15px #facc15; } }
         .toggle-active { background: #ef4444 !important; color: white !important; }
         .push-active { background: #facc15 !important; color: black !important; font-weight: 900; }
-        .loading-dots:after { content: '.'; animation: dots 1s steps(5, end) infinite; }
-        @keyframes dots { 0%, 20% { content: '.'; } 40% { content: '..'; } 60% { content: '...'; } 80% { content: '....'; } 100% { content: ''; } }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden text-[11px]">
@@ -22,14 +20,11 @@
         <div class="bg-zinc-900 p-4 rounded-xl mb-4 border border-white/10 shadow-2xl">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex flex-col">
-                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.6.9 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span></h1>
-                    <div id="status" class="text-[9px] text-zinc-500 font-bold mt-1 uppercase tracking-widest">
-                        Monitoring: <span id="count_all" class="text-white">0</span> | Warming: <span id="count_warm" class="text-yellow-500">0</span>
-                    </div>
+                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.7.1 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span></h1>
+                    <div class="text-[9px] text-zinc-500 font-bold mt-1 tracking-widest uppercase">Filter Level: <span class="text-red-500 font-black italic underline">Hardcore (1H Trend)</span></div>
                 </div>
                 <div class="flex gap-2">
                     <button id="pushToggle" onclick="togglePush()" class="bg-black border border-zinc-700 px-3 py-2 rounded-lg font-black text-zinc-400 text-[10px]">📳 Push: OFF</button>
-                    <button onclick="testPush()" class="bg-zinc-800 border border-zinc-600 px-3 py-2 rounded-lg font-black text-white text-[10px]">Test</button>
                     <button id="slopeToggle" onclick="toggleFilter('USE_FUEL')" class="bg-black border border-zinc-700 px-3 py-2 rounded-lg font-black text-zinc-400 text-[10px] toggle-active">⚓ Fuel Filter: ON</button>
                     <input type="text" id="searchInput" placeholder="SEARCH..." class="bg-black border border-zinc-800 px-3 py-1 rounded text-blue-400 outline-none w-32 uppercase">
                 </div>
@@ -43,7 +38,7 @@
         <div id="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto pr-2"></div>
     </div>
     <div class="w-72 bg-zinc-950 border-l border-zinc-900 flex flex-col p-4 text-[10px]">
-        <div class="text-zinc-600 font-black mb-4 border-b border-zinc-800 pb-2 uppercase">System Logs</div>
+        <div class="text-zinc-600 font-black mb-4 border-b border-zinc-800 pb-2 uppercase text-center font-black">Verified Signals Only</div>
         <div id="logs" class="flex-1 overflow-y-auto space-y-2"></div>
     </div>
 
@@ -57,7 +52,6 @@
 
     function toggleFilter(key) { SETTINGS[key] = !SETTINGS[key]; const btn = document.getElementById('slopeToggle'); btn.classList.toggle('toggle-active'); btn.innerText = `⚓ Fuel Filter: ${SETTINGS[key]?'ON':'OFF'}`; }
     function togglePush() { SETTINGS.PUSH_ON = !SETTINGS.PUSH_ON; const btn = document.getElementById('pushToggle'); btn.classList.toggle('push-active'); btn.innerText = `📳 Push: ${SETTINGS.PUSH_ON?'ON':'OFF'}`; }
-    async function testPush() { await fetch('https://api.pushover.net/1/messages.json',{method:'POST',body:new URLSearchParams({token:P_TOKEN,user:P_USER,title:"⚡ SNIPER TEST",message:"V5.6.9 Algo Calibrated!",sound:'alien'})}); }
 
     function addLog(msg, color="text-zinc-500") {
         const logs = document.getElementById('logs');
@@ -65,7 +59,7 @@
         div.className = `border-l-2 border-zinc-800 pl-2 py-1 ${color}`;
         div.innerHTML = `[${new Date().toLocaleTimeString('zh-TW',{hour12:false})}] ${msg}`;
         logs.prepend(div);
-        if (logs.children.length > 30) logs.lastChild.remove();
+        if (logs.children.length > 50) logs.lastChild.remove();
     }
 
     async function update() {
@@ -80,7 +74,7 @@
             const fData = await fRes.json(), tData = await tRes.json();
             const tMap = new Map(tData.map(t => [t.symbol, t]));
             const keyword = document.getElementById('searchInput').value.toUpperCase();
-            let results = [], wCount = 0;
+            let results = [];
 
             fData.forEach(c => {
                 const s = c.symbol;
@@ -89,78 +83,54 @@
                 const pNow = parseFloat(ticker.lastPrice), fNow = parseFloat(c.lastFundingRate), vNow = parseFloat(ticker.quoteVolume);
                 const h24 = parseFloat(ticker.highPrice), l24 = parseFloat(ticker.lowPrice);
                 
-                if (!stats[s]) {
-                    stats[s] = { lastV: vNow, vDeltas:[], frHist:[], pHist:[], pvDeltas:[], lastTrigger:0, logged:false };
-                }
+                if (!stats[s]) stats[s] = { lastV: vNow, vDeltas:[], frHist:[], pHist:[], pvDeltas:[], lastTrigger:0, logged:false };
 
-                // 核心算法：精準計算成交量增量
                 const vDelta = Math.max(0, vNow - stats[s].lastV);
                 stats[s].lastV = vNow;
                 stats[s].vDeltas.push(vDelta);
                 stats[s].pvDeltas.push(pNow * vDelta);
                 stats[s].frHist.push(fNow);
                 stats[s].pHist.push(pNow);
-
                 if (stats[s].frHist.length > DEPTH) {
                     stats[s].vDeltas.shift(); stats[s].pvDeltas.shift(); stats[s].frHist.shift(); stats[s].pHist.shift();
                 }
 
                 const dataLen = stats[s].frHist.length;
-                const isWarmed = dataLen >= 100;
-                if (!isWarmed) wCount++;
-                const isPinned = pinned.has(s), isSearching = keyword && s.includes(keyword);
+                if (dataLen < 100) return; // 熱機中不處理
 
-                if (isSearching || isPinned) results.push({ s, fNow, pNow, zonePrice:(h24+l24)/2, warming: !isWarmed, isPinned, isSearching });
-                if (!isWarmed) return;
-
-                // 窗口計算
+                // 計算 5m 與 1h 數據
                 const p5m = stats[s].pHist.slice(-100);
-                const pMax = Math.max(...p5m), pMin = Math.min(...p5m);
-                const range5m = pMax - pMin;
+                const range5m = Math.max(...p5m) - Math.min(...p5m);
                 const v5mSum = Math.max(0.0001, stats[s].vDeltas.slice(-100).reduce((a,b)=>a+b,0));
-                const pv5mSum = stats[s].pvDeltas.slice(-100).reduce((a,b)=>a+b,0);
-                
-                const slope = (fNow - stats[s].frHist[dataLen-100]) / (Math.abs(stats[s].frHist[dataLen-100]) || 0.0001);
-                const volatProp = range5m / (h24 - l24 || 1);
-                const vacScore = (range5m / v5mSum) * 100000000;
-                const vwap5m = pv5mSum / v5mSum;
+                const vwap5m = stats[s].pvDeltas.slice(-100).reduce((a,b)=>a+b,0) / v5mSum;
                 
                 const v1hSum = Math.max(0.0001, stats[s].vDeltas.reduce((a,b)=>a+b,0));
-                const pv1hSum = stats[s].pvDeltas.reduce((a,b)=>a+b,0);
-                const vwap1h = pv1hSum / v1hSum;
+                const vwap1h = stats[s].pvDeltas.reduce((a,b)=>a+b,0) / v1hSum;
 
-                const p1m = stats[s].pHist[dataLen-20] || stats[s].pHist[0];
-                const flashRatio = (pNow - p1m) / (h24 - l24 || 1);
+                const slope = (fNow - stats[s].frHist[dataLen-100]) / (Math.abs(stats[s].frHist[dataLen-100]) || 0.0001);
+                const vacScore = (range5m / v5mSum) * 100000000;
+                const flashRatio = (pNow - (stats[s].pHist[dataLen-20] || stats[s].pHist[0])) / (h24 - l24 || 1);
 
-                // 判定邏輯
-                const gateA = volatProp >= SETTINGS.VOLAT_RATIO;
-                const gateB = pNow > vwap5m;
-                const gateC = !SETTINGS.USE_FUEL || (slope <= SETTINGS.SLP && vacScore >= SETTINGS.VAC);
-                
-                // 修正：黃卡閃電必須高於 1H VWAP 且數據量足夠
-                const trendUp = dataLen > 20 && pNow > vwap1h;
-                const gateFlash = (flashRatio >= SETTINGS.VOLAT_RATIO) && trendUp;
+                // --- 這裡是核心過濾門檻：騙線直接在這裡被擋掉 ---
+                const isFlash = (flashRatio >= SETTINGS.VOLAT_RATIO) && (pNow > vwap1h);
+                const isFuel = (range5m/(h24-l24||1) >= SETTINGS.VOLAT_RATIO) && (pNow > vwap5m) && (!SETTINGS.USE_FUEL || (slope <= SETTINGS.SLP && vacScore >= SETTINGS.VAC));
 
-                const isTriggeredNow = (gateA && gateB && gateC) || gateFlash;
+                const isTriggeredNow = isFlash || isFuel;
                 if (isTriggeredNow) {
                     stats[s].lastTrigger = Date.now();
                     if (!stats[s].logged) {
-                        const type = gateFlash ? "⚡ 閃電" : "🎯 爆發";
-                        addLog(`${type}: ${s} (Trend:${trendUp?'UP':'STABLE'})`, gateFlash ? "text-yellow-400 font-black" : "text-purple-400 font-bold");
+                        addLog(`${isFlash?'⚡':'🎯'} ${s}`, isFlash ? "text-yellow-400 font-black" : "text-purple-400 font-bold");
                         stats[s].logged = true;
-                        if(SETTINGS.PUSH_ON) fetch('https://api.pushover.net/1/messages.json',{method:'POST',body:new URLSearchParams({token:P_TOKEN,user:P_USER,title:`${type}: ${s}`,message:`Flash:${(flashRatio*100).toFixed(1)}% | Vac:${vacScore.toFixed(0)}`,sound:'alien'})});
                     }
                 } else { stats[s].logged = false; }
 
                 const timeSinceLast = Date.now() - stats[s].lastTrigger;
-                if (!results.find(r => r.s === s)) {
-                    if (isTriggeredNow || timeSinceLast < MEMORY) {
-                        results.push({ s, fNow, pNow, slope, vacScore, volatProp, flashRatio, isTriggered: isTriggeredNow, isFlash: gateFlash, linger: timeSinceLast < MEMORY, timeLeft: Math.ceil((MEMORY-timeSinceLast)/1000), trendStatus: dataLen <= 20 ? 'WARM' : (trendUp ? 'UP' : 'DOWN') });
-                    }
+                const isPinned = pinned.has(s), isSearching = keyword && s.includes(keyword);
+
+                if (isTriggeredNow || timeSinceLast < MEMORY || isPinned || isSearching) {
+                    results.push({ s, fNow, pNow, slope, vacScore, flashRatio, isTriggered: isTriggeredNow, isFlash, linger: timeSinceLast < MEMORY && !isTriggeredNow, timeLeft: Math.ceil((MEMORY-timeSinceLast)/1000), trendUp: pNow > vwap1h });
                 }
             });
-            document.getElementById('count_all').innerText = fData.length;
-            document.getElementById('count_warm').innerText = wCount;
             render(results);
         } catch (e) { console.error(e); }
         isUpdating = false;
@@ -168,36 +138,30 @@
 
     function render(results) {
         const list = document.getElementById('list'); list.innerHTML = '';
-        results.sort((a,b) => (pinned.has(b.s) - pinned.has(a.s)) || (b.isTriggered - a.isTriggered));
+        results.sort((a,b) => (pinned.has(b.s) - pinned.has(a.s)) || (a.linger - b.linger) || (b.isTriggered - a.isTriggered));
         results.forEach(item => {
             const div = document.createElement('div');
             const isPinned = pinned.has(item.s);
-            const borderClass = item.isFlash ? 'flash-trigger' : (item.isTriggered ? 'hunt-trigger' : '');
-            div.className = `card p-4 rounded-xl ${borderClass} ${isPinned ? 'pinned' : ''}`;
+            div.className = `card p-4 rounded-xl ${item.isFlash ? 'flash-trigger' : (item.isTriggered ? 'hunt-trigger' : '')} ${isPinned ? 'pinned' : ''} ${item.linger ? 'opacity-50' : ''}`;
             div.onclick = () => { isPinned ? pinned.delete(item.s) : pinned.add(item.s); };
             div.innerHTML = `
                 <div class="flex justify-between items-start">
                     <div>
-                        <div class="text-white font-black text-lg">${isPinned?'📌':''} ${item.s.replace('USDT','')} ${item.linger && !item.isTriggered ? `<span class="text-[8px] bg-zinc-800 px-1 rounded text-zinc-400 animate-pulse ml-1">${item.timeLeft}s</span>` : ''}</div>
-                        <div class="text-[10px] text-zinc-500">FR: ${(item.fNow*100).toFixed(4)}%</div>
+                        <div class="text-white font-black text-lg">${isPinned?'📌':''} ${item.s.replace('USDT','')} ${item.linger ? `<span class="text-yellow-500 text-[10px] ml-2 italic">⏳ ${item.timeLeft}s</span>` : ''}</div>
+                        <div class="text-[10px] text-zinc-500 font-bold tracking-tighter">FR: ${(item.fNow*100).toFixed(4)}%</div>
                     </div>
-                    <div class="text-right"><div class="text-blue-400 font-bold">$${item.pNow.toFixed(item.pNow<1?6:2)}</div></div>
+                    <div class="text-right"><div class="text-blue-400 font-black">$${item.pNow.toFixed(item.pNow<1?6:2)}</div></div>
                 </div>
-                ${item.warming ? `
-                    <div class="mt-4 p-2 bg-black/50 rounded text-center"><span class="text-zinc-500 font-bold text-[9px] loading-dots italic">HOT DATA LOADING</span></div>
-                ` : `
-                    <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-white/5 text-[9px]">
-                        <div class="text-red-400 font-bold">SLOPE: ${(item.slope*100).toFixed(1)}%</div>
-                        <div class="${item.isFlash ? 'text-yellow-400 font-black' : 'text-zinc-500'}">1M FLASH: ${(item.flashRatio*100).toFixed(1)}%</div>
-                        <div class="text-blue-300 font-bold">VAC: ${item.vacScore.toFixed(0)}</div>
-                        <div class="${item.trendStatus==='UP' ? 'text-green-400' : (item.trendStatus==='DOWN' ? 'text-red-500' : 'text-zinc-500')} font-bold text-right italic text-[8px]">1H TREND: ${item.trendStatus}</div>
-                    </div>
-                `}
+                <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-white/5 text-[9px] font-bold">
+                    <div class="text-red-400">SLOPE: ${(item.slope*100).toFixed(1)}%</div>
+                    <div class="${item.isFlash?'text-yellow-400':'text-zinc-500'}">1M FLASH: ${(item.flashRatio*100).toFixed(1)}%</div>
+                    <div class="text-blue-300">VAC: ${item.vacScore.toFixed(0)}</div>
+                    <div class="${item.trendUp?'text-green-400':'text-red-500'} text-right italic uppercase text-[8px]">1H Trend: ${item.trendUp?'Up':'Down'}</div>
+                </div>
             `;
             list.appendChild(div);
         });
     }
-
     setInterval(update, 3000);
     document.getElementById('slp_range').oninput = function() { SETTINGS.SLP = this.value/1000; document.getElementById('slp_val').innerText = (this.value/10).toFixed(1)+'%'; };
     document.getElementById('volat_range').oninput = function() { SETTINGS.VOLAT_RATIO = this.value/100; document.getElementById('volat_val').innerText = this.value+'%'; };
