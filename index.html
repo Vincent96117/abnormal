@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V6.5.3 - LOG RESTORED</title>
+    <title>⚡ SNIPER V6.5.5 - TOP 10 STABLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #e4e4e7; font-family: 'JetBrains Mono', monospace; }
@@ -10,7 +10,7 @@
         .sniper-trigger { border: 2px solid #ef4444 !important; background: #450a0a !important; animation: blink-red 0.6s infinite !important; }
         @keyframes blink-red { 0%, 100% { box-shadow: 0 0 20px #7f1d1d; } 50% { box-shadow: 0 0 5px #7f1d1d; } }
         .active-fuel { background: #a855f7 !important; color: white !important; }
-        #logs::-webkit-scrollbar { width: 4px; }
+        #logs::-webkit-scrollbar, #potential-list::-webkit-scrollbar { width: 4px; }
         #logs::-webkit-scrollbar-thumb { background: #27272a; }
     </style>
 </head>
@@ -19,7 +19,8 @@
         <div class="panel p-5">
             <div class="flex justify-between items-center mb-6">
                 <div>
-                    <h1 class="text-2xl font-black italic text-white tracking-tighter">V6.5.3 <span class="text-red-600 italic">SNIPER</span></h1>
+                    <h1 class="text-2xl font-black italic text-white tracking-tighter">V6.5.5 <span class="text-red-600 italic">SNIPER</span></h1>
+                    <div class="text-[9px] text-zinc-500 font-bold uppercase mt-1">Status: Stable Top 10 Tracking</div>
                 </div>
                 <div class="flex gap-4">
                     <button id="fuelBtn" onclick="toggleFuel()" class="bg-zinc-900 border border-zinc-700 px-6 py-2 rounded-xl text-purple-400 font-black text-[10px]">⚓ Fuel Mode</button>
@@ -27,21 +28,25 @@
                 </div>
             </div>
             <div class="grid grid-cols-4 gap-6">
-                <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5">
-                    <div class="flex justify-between text-red-500"><span class="text-[10px]">🔴 SNIPER</span><span id="flash_val" class="text-white text-sm font-black">20%</span></div>
-                    <input type="range" id="flash_range" min="1" max="60" value="20" oninput="updateVal('flash', this.value)">
+                <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5 text-center">
+                    <div class="text-red-500 text-[10px] mb-1">🔴 SNIPER FLASH</div>
+                    <span id="flash_val" class="text-white text-sm font-black">20%</span>
+                    <input type="range" id="flash_range" class="w-full mt-2" min="1" max="60" value="20" oninput="updateVal('flash', this.value)">
                 </div>
-                <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5">
-                    <div class="flex justify-between text-yellow-500"><span class="text-[10px]">🟡 HUNTER SLP</span><span id="slp_val" class="text-white text-sm font-black">-2.5%</span></div>
-                    <input type="range" id="slp_range" min="-800" max="0" value="-25" oninput="updateVal('slp', this.value)">
+                <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5 text-center">
+                    <div class="text-yellow-500 text-[10px] mb-1">🟡 HUNTER SLP</div>
+                    <span id="slp_val" class="text-white text-sm font-black">-2.5%</span>
+                    <input type="range" id="slp_range" class="w-full mt-2" min="-800" max="0" value="-25" oninput="updateVal('slp', this.value)">
                 </div>
-                <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5">
-                    <div class="flex justify-between text-purple-500"><span class="text-[10px]">⚓ FUEL RATIO</span><span id="fuel_val" class="text-white text-sm font-black">10%</span></div>
-                    <input type="range" id="fuel_range" min="1" max="60" value="10" oninput="updateVal('fuel', this.value)">
+                <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5 text-center">
+                    <div class="text-purple-500 text-[10px] mb-1">⚓ FUEL RATIO</div>
+                    <span id="fuel_val" class="text-white text-sm font-black">10%</span>
+                    <input type="range" id="fuel_range" class="w-full mt-2" min="1" max="60" value="10" oninput="updateVal('fuel', this.value)">
                 </div>
-                <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5">
-                    <div class="flex justify-between text-blue-500"><span class="text-[10px]">💎 VAC LIMIT</span><span id="vac_val" class="text-white text-sm font-black">120</span></div>
-                    <input type="range" id="vac_range" min="10" max="500" value="120" oninput="updateVal('vac', this.value)">
+                <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5 text-center">
+                    <div class="text-blue-500 text-[10px] mb-1">💎 VAC LIMIT</div>
+                    <span id="vac_val" class="text-white text-sm font-black">120</span>
+                    <input type="range" id="vac_range" class="w-full mt-2" min="10" max="500" value="120" oninput="updateVal('vac', this.value)">
                 </div>
             </div>
         </div>
@@ -50,20 +55,19 @@
 
     <div class="w-80 bg-black border-l border-zinc-900 flex flex-col shadow-2xl">
         <div class="p-4 border-b border-zinc-900">
-            <div class="text-blue-500 font-black text-[10px] uppercase italic mb-3">🔥 今日潛力動能 (TOP 6)</div>
-            <div id="potential-list" class="space-y-2"></div>
+            <div class="text-blue-500 font-black text-[10px] uppercase italic mb-3 tracking-widest">🔥 今日潛力動能 (TOP 10)</div>
+            <div id="potential-list" class="space-y-2 overflow-y-auto max-h-[60vh] pr-1"></div>
         </div>
         <div class="flex-1 flex flex-col p-4 overflow-hidden">
-            <div class="text-zinc-600 font-bold text-[9px] uppercase mb-2 tracking-widest">Live Intercept Log</div>
-            <div id="logs" class="flex-1 overflow-y-auto space-y-2 pr-2 text-[9px]"></div>
+            <div class="text-zinc-600 font-bold text-[9px] uppercase mb-2">Live Intercept Log</div>
+            <div id="logs" class="flex-1 overflow-y-auto space-y-2 pr-2"></div>
         </div>
     </div>
 
 <script>
-    const P_USER = "Gkhqyhobnxzjfwgvaiyp347m1jkhn4", P_TOKEN = "acyoe3sz15x491r1349fdcau7x6pw";
     const EXCLUDE = ['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT','BNBUSDT','BNXUSDT'];
     const LOCK_TIME = 180000;
-    let stats = {}, pinned = new Set(), keyword = "", baselineData = {};
+    let stats = {}, pinned = new Set(), baselineData = {};
     let SETTINGS = { SLP: -0.025, FLASH: 0.20, FUEL: 0.10, VAC: 120, USE_FUEL: true };
 
     function updateVal(key, val) {
@@ -72,24 +76,28 @@
         document.getElementById(key+'_val').innerText = (key==='slp'?(val/10)+'%':val+'%');
     }
 
+    async function fetchSymbolBaselines(s) {
+        try {
+            const [k, h] = await Promise.all([
+                fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${s}&interval=1d&limit=5`).then(r=>r.json()),
+                fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${s}&interval=1h&limit=120`).then(r=>r.json())
+            ]);
+            let tV=0, tQ=0, tA=0; k.forEach(v=>{ tA+=(v[2]-v[3])/v[1]; tV+=parseFloat(v[5]); tQ+=parseFloat(v[7]); });
+            baselineData[s] = { avgAmp: tA/5, wap5d: tQ/tV, avgTradesHr: h.reduce((a,c)=>a+parseInt(c[8]),0)/120 };
+        } catch(e) {}
+    }
+
     async function initBaselines() {
         const res = await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr');
         const data = await res.json();
         const targets = data.filter(s => s.symbol.endsWith('USDT') && !EXCLUDE.includes(s.symbol)).sort((a,b)=>b.quoteVolume-a.quoteVolume).slice(0, 100);
-        for(let s of targets) {
-            const [k, h] = await Promise.all([
-                fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${s.symbol}&interval=1d&limit=5`).then(r=>r.json()),
-                fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${s.symbol}&interval=1h&limit=120`).then(r=>r.json())
-            ]);
-            let tV=0, tQ=0, tA=0; k.forEach(v=>{ tA+=(v[2]-v[3])/v[1]; tV+=parseFloat(v[5]); tQ+=parseFloat(v[7]); });
-            baselineData[s.symbol] = { avgAmp: tA/5, wap5d: tQ/tV, avgTradesHr: h.reduce((a,c)=>a+parseInt(c[8]),0)/120 };
-        }
+        for(let s of targets) { await fetchSymbolBaselines(s.symbol); }
     }
 
     function addLog(s, msg) {
         const logs = document.getElementById('logs');
         const div = document.createElement('div');
-        div.className = "bg-zinc-900/50 p-2 rounded border-l-2 border-red-600 text-zinc-400";
+        div.className = "bg-zinc-900/50 p-2 rounded border-l-2 border-red-600 text-[9px]";
         div.innerHTML = `<span class="text-zinc-600">[${new Date().toLocaleTimeString()}]</span> <span class="text-white font-bold">${s}</span> ${msg}`;
         logs.prepend(div); if(logs.children.length > 50) logs.lastChild.remove();
     }
@@ -102,49 +110,43 @@
             const now = Date.now();
 
             fData.forEach(c => {
-                const s = c.symbol; if(!s.endsWith('USDT') || EXCLUDE.includes(s)) return;
-                const t = tMap.get(s); if(!t || !baselineData[s]) return;
+                const s = c.symbol; if(!s.endsWith('USDT') || (EXCLUDE.includes(s) && !pinned.has(s))) return;
+                const t = tMap.get(s); if(!t) return;
                 const pNow = parseFloat(t.lastPrice), trades = parseInt(t.count), wap = parseFloat(t.weightedAvgPrice);
-                if(!stats[s]) stats[s]={ lastV:parseFloat(t.quoteVolume), vDeltas:[], pHist:[], lastS:0, hourStart: new Date().setMinutes(0,0,0), startTrades: trades };
                 
-                const vDelta = Math.max(0, parseFloat(t.quoteVolume) - stats[s].lastV); 
-                stats[s].lastV = parseFloat(t.quoteVolume);
-                stats[s].vDeltas.push(vDelta); if(stats[s].vDeltas.length>300) stats[s].vDeltas.shift();
+                if(!stats[s]) stats[s]={ lastV:parseFloat(t.quoteVolume), vDeltas:[], pHist:[], lastS:0, hourStart: new Date().setMinutes(0,0,0), startTrades: trades };
+                const vDelta = Math.max(0, parseFloat(t.quoteVolume) - stats[s].lastV); stats[s].lastV = parseFloat(t.quoteVolume);
                 stats[s].pHist.push(pNow); if(stats[s].pHist.length>50) stats[s].pHist.shift();
                 
                 const distWap = (pNow - wap)/wap, flash = (pNow - stats[s].pHist[0])/(parseFloat(t.highPrice) - parseFloat(t.lowPrice) || 0.001);
                 
-                // --- 獨立的主卡片 Sniper 觸發邏輯 ---
-                const isSniperTrigger = vDelta > (Math.max(...stats[s].vDeltas.slice(0,-1))*1.1) && flash >= SETTINGS.FLASH && distWap > 0.003;
-                if(isSniperTrigger && (now - stats[s].lastS) > 60000) { 
-                    stats[s].lastS = now; 
-                    addLog(s.replace('USDT',''), "SNIPER TRIGGERED!");
-                }
-                if((now-stats[s].lastS)<LOCK_TIME || pinned.has(s)) {
-                    sniperResults.push({ s, pNow, distWap, isS:true });
-                }
+                // 主卡片偵測
+                const isSniperTrigger = vDelta > (Math.max(...stats[s].vDeltas||[0])*1.1) && flash >= SETTINGS.FLASH && distWap > 0.003;
+                if(isSniperTrigger && (now - stats[s].lastS) > 60000) { stats[s].lastS = now; addLog(s.replace('USDT',''), "SNIPER TRIGGERED!"); }
+                if((now-stats[s].lastS)<LOCK_TIME || pinned.has(s)) { sniperResults.push({ s, pNow, distWap, isS:(now-stats[s].lastS)<LOCK_TIME }); }
+                if(stats[s].vDeltas) { stats[s].vDeltas.push(vDelta); if(stats[s].vDeltas.length>300) stats[s].vDeltas.shift(); }
 
-                // --- 獨立的潛力榜排序邏輯 ---
-                const vScore = ((t.highPrice-t.lowPrice)/t.openPrice) / baselineData[s].avgAmp;
-                const hScore = ((trades - stats[s].startTrades)*(60/Math.max(1,(now-stats[s].hourStart)/60000))) / baselineData[s].avgTradesHr;
-                const wapGap = ((pNow / baselineData[s].wap5d) - 1)*100;
-                const isAbove = pNow > baselineData[s].wap5d;
-
-                const item = { s, vScore, hScore, wapGap, wap5d: baselineData[s].wap5d, pNow, score: (vScore*0.5 + hScore*0.5) };
-                if (isAbove && vScore > 1.1) { item.status = "🔴 強"; strongPool.push(item); }
-                else { item.status = !isAbove ? "⚪ 補(低WAP)" : "⚪ 補(低動能)"; backupPool.push(item); }
+                // 潛力榜數據
+                if(baselineData[s]) {
+                    const vScore = ((t.highPrice-t.lowPrice)/t.openPrice) / baselineData[s].avgAmp;
+                    const hScore = ((trades - stats[s].startTrades)*(60/Math.max(1,(now-stats[s].hourStart)/60000))) / baselineData[s].avgTradesHr;
+                    const wapGap = ((pNow / baselineData[s].wap5d) - 1)*100;
+                    const item = { s, vScore, hScore, wapGap, wap5d: baselineData[s].wap5d, pNow, score: (vScore*0.5 + hScore*0.5) };
+                    if (pNow > baselineData[s].wap5d && vScore > 1.1) { item.status = "🔴 強"; strongPool.push(item); }
+                    else { item.status = pNow <= baselineData[s].wap5d ? "⚪ 補(低WAP)" : "⚪ 補(低動能)"; backupPool.push(item); }
+                }
             });
 
             strongPool.sort((a,b)=>b.score - a.score);
             backupPool.sort((a,b)=>b.score - a.score);
-            renderPotentials([...strongPool, ...backupPool].slice(0,6));
+            renderPotentials([...strongPool, ...backupPool].slice(0,10));
             render(sniperResults);
         } catch(e){}
     }
 
-    function renderPotentials(top6) {
+    function renderPotentials(top10) {
         const l = document.getElementById('potential-list'); l.innerHTML = '';
-        top6.forEach(item => {
+        top10.forEach(item => {
             const div = document.createElement('div');
             div.className = "bg-zinc-900/40 p-3 rounded-xl border border-white/5 space-y-1";
             div.innerHTML = `
@@ -158,15 +160,23 @@
     function render(data) {
         const l = document.getElementById('list'); l.innerHTML = '';
         data.forEach(i => {
-            const d = document.createElement('div'); d.className = `card p-5 rounded-2xl sniper-trigger`;
+            const d = document.createElement('div'); d.className = `card p-5 rounded-2xl ${i.isS?'sniper-trigger':''}`;
             d.innerHTML = `<div class="flex justify-between"><div><div class="text-white font-black text-xl italic">${i.s.replace('USDT','')}</div><div class="text-green-500 font-bold mt-1">GAP: ${(i.distWap*100).toFixed(2)}%</div></div><div class="text-white font-black text-lg">$${i.pNow.toFixed(i.pNow<1?4:2)}</div></div>`;
             l.appendChild(d);
         });
     }
 
-    initBaselines(); setInterval(update, 3000);
-    function handleSearch(e){ if(e.key==='Enter'){ const k = e.target.value.toUpperCase(); if(k) pinned.add(k.endsWith('USDT')?k:k+'USDT'); e.target.value=''; }}
+    async function handleSearch(e){ 
+        if(e.key==='Enter'){ 
+            let k = e.target.value.toUpperCase(); if(!k) return;
+            if(!k.endsWith('USDT')) k += 'USDT';
+            if(!baselineData[k]) { addLog(k.replace('USDT',''), "正在建立基準..."); await fetchSymbolBaselines(k); }
+            pinned.add(k); e.target.value=''; addLog(k.replace('USDT',''), "已鎖定全場監控");
+        }
+    }
+    
     function toggleFuel(){ SETTINGS.USE_FUEL=!SETTINGS.USE_FUEL; document.getElementById('fuelBtn').classList.toggle('active-fuel'); }
+    initBaselines(); setInterval(update, 3000);
 </script>
 </body>
 </html>
