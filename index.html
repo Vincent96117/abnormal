@@ -1,60 +1,72 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V6.3.0 - ANTI-FAKE SQUAD</title>
+    <title>⚡ SNIPER V6.3.2 - FLEXIBLE FLOW</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #050505; color: #e4e4e7; font-family: 'JetBrains Mono', monospace; }
+        body { background: #050505; color: #e4e4e7; font-family: 'JetBrains Mono', monospace; overflow: hidden; }
         .panel { background: linear-gradient(145deg, #18181b, #09090b); border: 1px solid #27272a; }
         .card { background: #09090b; border: 1px solid #18181b; position: relative; transition: 0.2s; overflow: hidden; }
         
-        /* 加強版呼吸燈 */
-        .sniper-trigger { border: 2px solid #ef4444 !important; background: #450a0a !important; animation: blink-red 0.6s infinite ease-in-out; z-index: 50; }
-        .hunter-trigger { border: 2px solid #facc15 !important; background: #422006 !important; animation: blink-yellow 1s infinite ease-in-out; }
-        .fuel-trigger { border: 2px solid #a855f7 !important; background: #1e1b4b !important; }
+        /* 真動能-強效呼吸燈 */
+        .sniper-trigger { 
+            border: 2px solid #ef4444 !important; 
+            background: #450a0a !important; 
+            animation: blink-red 0.6s infinite ease-in-out !important; 
+        }
+        .hunter-trigger { 
+            border: 2px solid #facc15 !important; 
+            background: #422006 !important; 
+            animation: blink-yellow 1s infinite ease-in-out !important; 
+        }
+        .fading { opacity: 0.4; filter: grayscale(1); animation: none !important; border-style: dashed !important; }
         
-        .fading { opacity: 0.5; filter: grayscale(0.8); animation: none !important; border-style: dashed !important; }
+        @keyframes blink-red { 
+            0%, 100% { box-shadow: inset 0 0 25px #7f1d1d, 0 0 15px #ef4444; transform: scale(1.02); } 
+            50% { box-shadow: inset 0 0 5px #7f1d1d, 0 0 2px #7f1d1d; transform: scale(1); } 
+        }
+        @keyframes blink-yellow { 
+            0%, 100% { box-shadow: inset 0 0 15px #713f12, 0 0 10px #facc15; } 
+            50% { box-shadow: inset 0 0 2px #713f12; } 
+        }
         
-        @keyframes blink-red { 0%, 100% { box-shadow: inset 0 0 20px #7f1d1d, 0 0 15px #ef4444; transform: scale(1.01); } 50% { box-shadow: inset 0 0 5px #7f1d1d, 0 0 5px #7f1d1d; transform: scale(1); } }
-        @keyframes blink-yellow { 0%, 100% { box-shadow: inset 0 0 15px #713f12, 0 0 10px #facc15; } 50% { box-shadow: inset 0 0 2px #713f12; } }
+        /* 彈性日誌區：不綁死，隨內容動 */
+        #log-area { flex: 0 0 auto; min-width: 280px; max-width: 400px; transition: all 0.3s; }
+        #logs::-webkit-scrollbar { width: 4px; }
+        #logs::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
         
         input[type=range] { -webkit-appearance: none; background: #333; height: 6px; border-radius: 3px; width: 100%; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #fff; cursor: pointer; border: 2px solid #ef4444; }
-        
-        #logs::-webkit-scrollbar { width: 4px; }
-        #logs::-webkit-scrollbar-thumb { background: #333; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: #fff; cursor: pointer; border: 3px solid #ef4444; }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden text-[11px]">
+<body class="flex h-screen w-screen">
     <div class="flex-1 flex flex-col p-4 overflow-hidden">
         <div class="panel p-6 rounded-2xl mb-4 shadow-2xl">
             <div class="flex justify-between items-center mb-6">
-                <div>
-                    <h1 class="text-2xl font-black italic text-white uppercase tracking-tighter">Sniper V6.3.0 <span class="text-red-600 text-sm not-italic ml-2 underline">真動能鑑定</span></h1>
-                </div>
+                <h1 class="text-2xl font-black italic text-white uppercase tracking-tighter">Sniper V6.3.2 <span class="text-red-600 text-xs not-italic ml-2">真動能鑑定</span></h1>
                 <div class="flex gap-3">
                     <button id="fuelBtn" onclick="toggleFuel()" class="bg-zinc-800 border border-zinc-700 px-4 py-1.5 rounded-lg font-black text-purple-400 text-[10px] uppercase transition-all">⚓ Fuel Mode</button>
                     <input type="text" id="search" onkeydown="handleSearch(event)" placeholder="SYMBOL & ENTER" class="bg-black border border-zinc-700 px-3 py-1.5 rounded-lg text-blue-400 outline-none w-40 font-black focus:border-red-500">
                 </div>
             </div>
 
-            <div class="grid grid-cols-4 gap-6">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
                 <div class="space-y-2">
-                    <div class="flex justify-between font-black text-red-500"><span>🔴 SNIPER (真動能)</span><span id="flash_val">35%</span></div>
+                    <div class="flex justify-between font-black text-red-500 text-[10px]"><span>🔴 SNIPER (真動能)</span><span id="flash_val">35%</span></div>
                     <input type="range" id="flash_range" min="1" max="60" value="35">
-                    <p id="flash_h" class="text-[8px] text-red-400 font-bold">💎 建議 35% 以上，絕不騙線</p>
+                    <p class="text-[8px] text-red-400/70 font-bold">💎 建議 35% 以上防騙線</p>
                 </div>
                 <div class="space-y-2">
-                    <div class="flex justify-between font-black text-yellow-500"><span>🟡 HUNTER (大肉)</span><span id="slp_val">-2.0%</span></div>
+                    <div class="flex justify-between font-black text-yellow-500 text-[10px]"><span>🟡 HUNTER (大肉)</span><span id="slp_val">-2.0%</span></div>
                     <input type="range" id="slp_range" min="-800" max="0" value="-20">
-                    <p id="slp_h" class="text-[8px] text-yellow-500 font-bold">📈 建議 -2.0%，抓軋空起點</p>
+                    <p class="text-[8px] text-yellow-500/70 font-bold">📈 建議 -2.0% 抓起點</p>
                 </div>
-                <div class="space-y-2 text-zinc-600">
-                    <div class="flex justify-between font-black"><span>⚓ FUEL</span><span id="fuel_val">15%</span></div>
+                <div class="space-y-2">
+                    <div class="flex justify-between font-black text-purple-500 text-[10px]"><span>⚓ FUEL</span><span id="fuel_val">15%</span></div>
                     <input type="range" id="fuel_range" min="1" max="60" value="15">
                 </div>
-                <div class="space-y-2 text-zinc-600">
-                    <div class="flex justify-between font-black"><span>💎 VAC 真空</span><span id="vac_val">150</span></div>
+                <div class="space-y-2">
+                    <div class="flex justify-between font-black text-blue-500 text-[10px]"><span>💎 VAC 真空</span><span id="vac_val">150</span></div>
                     <input type="range" id="vac_range" min="10" max="500" value="150">
                 </div>
             </div>
@@ -63,17 +75,18 @@
         <div id="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pr-2"></div>
     </div>
 
-    <div class="w-80 bg-black border-l border-zinc-900 flex flex-col p-4 overflow-hidden">
-        <div class="text-zinc-500 font-black text-center mb-4 pb-2 border-b border-zinc-800 text-[10px] tracking-widest uppercase italic font-black">Tactical Log</div>
-        <div id="logs" class="flex-1 overflow-y-auto space-y-2 flex flex-col"></div>
-        <button onclick="testPush()" class="mt-4 bg-zinc-900 text-zinc-600 py-3 rounded-xl font-black text-[10px]">PING CONNECTION</button>
+    <div id="log-area" class="bg-black border-l border-zinc-900 flex flex-col p-4">
+        <div class="text-zinc-600 font-black text-center mb-4 pb-2 border-b border-zinc-800 text-[10px] tracking-widest uppercase italic">Combat Status</div>
+        <div id="logs" class="flex-1 overflow-y-auto space-y-2 flex flex-col-reverse justify-end">
+            </div>
+        <button onclick="testPush()" class="mt-4 bg-zinc-900 hover:bg-zinc-800 text-zinc-500 py-3 rounded-xl font-black text-[9px] transition-all">TEST PUSH</button>
     </div>
 
 <script>
     const P_USER = "Gkhqyhobnxzjfwgvaiyp347m1jkhn4", P_TOKEN = "acyoe3sz15x491r1349fdcau7x6pw";
     const EXCLUDE = ['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT','BNBUSDT','BNXUSDT'];
     const LOCK_TIME = 180000;
-    let stats = {}, pinned = new Set(), keyword = "";
+    let stats = {}, keyword = "";
     let SETTINGS = { SLP: -0.02, FLASH: 0.35, FUEL: 0.15, VAC: 150, USE_FUEL: true };
 
     async function push(t, m) { fetch('https://api.pushover.net/1/messages.json',{method:'POST',body:new URLSearchParams({token:P_TOKEN,user:P_USER,title:t,message:m})}); }
@@ -81,15 +94,15 @@
     function addLog(m, c="text-zinc-500") {
         const l = document.getElementById('logs');
         const d = document.createElement('div');
-        d.className = `pl-2 border-l-2 border-zinc-800 py-1 ${c} font-bold text-[10px]`;
+        d.className = `pl-2 border-l-2 border-zinc-800 py-1 ${c} font-bold text-[10px] animate-pulse`;
         d.innerHTML = `<span class="opacity-30 text-[8px]">${new Date().toLocaleTimeString()}</span> ${m}`;
         l.prepend(d);
-        if(l.children.length > 50) l.lastChild.remove();
+        if(l.children.length > 40) l.lastChild.remove();
     }
 
     function handleSearch(e) { if(e.key==='Enter') keyword = e.target.value.toUpperCase(); }
     function toggleFuel() { SETTINGS.USE_FUEL=!SETTINGS.USE_FUEL; document.getElementById('fuelBtn').classList.toggle('text-white'); addLog("Mode Toggled", "text-blue-400"); }
-    function testPush() { push("PING", "V6.3.0 ONLINE"); addLog("CONNECTION OK", "text-green-500"); }
+    function testPush() { push("PING", "V6.3.2 READY"); addLog("CONNECTION OK", "text-green-500"); }
 
     async function update() {
         try {
@@ -113,19 +126,17 @@
                 stats[s].vDeltas.push(vDelta); if(stats[s].vDeltas.length > 120) stats[s].vDeltas.shift();
                 stats[s].pHist.push(pNow); if(stats[s].pHist.length > 30) stats[s].pHist.shift();
                 
-                // 真動能核心計算
                 const avgVol = stats[s].vDeltas.reduce((a,b)=>a+b,0) / stats[s].vDeltas.length;
                 const impact = vDelta / (avgVol || 1);
                 const flash = (pNow - (stats[s].pHist[0] || pNow)) / (parseFloat(ticker.highPrice) - parseFloat(ticker.lowPrice) || 1);
                 const isTrending = stats[s].pHist.slice(-3).every((v, i, a) => i === 0 || v >= a[i-1]);
                 const distWap = (pNow - wap) / wap;
 
-                // 紅卡判定：極致過濾
                 const isSNow = (impact > 5.0) && (flash >= SETTINGS.FLASH) && isTrending && (distWap > 0.012);
                 const isHNow = (impact > 1.5) && (flash >= 0.15) && (pNow > wap);
 
                 if(isSNow) {
-                    if(Date.now() - stats[s].lastS > 600000) {
+                    if(Date.now() - stats[s].lastS > 300000) {
                         push(`🔥 真動能: ${s}`, `成交量衝擊: ${impact.toFixed(1)}x`);
                         addLog(`🔥 [真動能] ${s} 發動`, "text-red-500 underline");
                     }
@@ -136,7 +147,7 @@
                 const isS = (Date.now() - stats[s].lastS) < LOCK_TIME;
                 const isH = (Date.now() - stats[s].lastH) < LOCK_TIME;
 
-                if(isS || isH || (SETTINGS.USE_FUEL && fNow < SETTINGS.SLP) || pinned.has(s) || (keyword && s.includes(keyword))) {
+                if(isS || isH || (SETTINGS.USE_FUEL && fNow < SETTINGS.SLP) || (keyword && s.includes(keyword))) {
                     results.push({ s, pNow, wap, distWap, isS, isH, isSNow, isHNow, sAge:Date.now()-stats[s].lastS, hAge:Date.now()-stats[s].lastH, isF: fNow < SETTINGS.SLP });
                 }
             });
@@ -160,11 +171,11 @@
                 <div class="flex justify-between items-start">
                     <div>
                         <div class="text-white font-black text-xl italic tracking-tighter">${item.s.replace('USDT','')}</div>
-                        <div class="text-[9px] font-bold ${item.distWap>0?'text-green-500':'text-red-500'}">GAP: ${(item.distWap*100).toFixed(2)}%</div>
+                        <div class="text-[9px] font-bold ${item.distWap>0?'text-green-400':'text-red-400'}">GAP: ${(item.distWap*100).toFixed(2)}%</div>
                     </div>
                     <div class="text-right">
                         <div class="text-white font-black text-lg">$${item.pNow.toFixed(item.pNow<1?5:2)}</div>
-                        <div class="text-[8px] text-zinc-500 font-bold uppercase">WAP: ${item.wap.toFixed(item.wap<1?4:2)}</div>
+                        <div class="text-[8px] text-zinc-500 font-bold uppercase tracking-tighter">WAP: ${item.wap.toFixed(item.wap<1?4:2)}</div>
                     </div>
                 </div>
                 <div class="mt-4 pt-3 border-t border-white/5 flex justify-between items-center text-[9px] font-black">
