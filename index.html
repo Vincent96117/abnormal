@@ -1,30 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V6.5.0 - FINAL STABLE</title>
+    <title>⚡ SNIPER V6.5.1 - WAP RADAR</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #e4e4e7; font-family: 'JetBrains Mono', monospace; }
         .panel { background: #0a0a0a; border-bottom: 2px solid #1a1a1a; position: sticky; top: 0; z-index: 100; }
         .card { background: #09090b; border: 1px solid #18181b; min-height: 140px; }
-        
         .card-idle { animation: breath 4s infinite ease-in-out; }
-        @keyframes breath { 
-            0%, 100% { border-color: #1a1a1a; box-shadow: 0 0 0px rgba(0,0,0,0); } 
-            50% { border-color: #166534; box-shadow: 0 0 10px rgba(22,101,52,0.2); } 
-        }
-
+        @keyframes breath { 0%, 100% { border-color: #1a1a1a; } 50% { border-color: #166534; } }
         .sniper-trigger { border: 2px solid #ef4444 !important; background: #450a0a !important; animation: blink-red 0.6s infinite !important; }
         @keyframes blink-red { 0%, 100% { box-shadow: 0 0 20px #7f1d1d; } 50% { box-shadow: 0 0 5px #7f1d1d; } }
-
-        .hunter-trigger { border: 2px solid #facc15 !important; background: #422006 !important; animation: blink-yellow 1s infinite !important; }
-        @keyframes blink-yellow { 0%, 100% { box-shadow: 0 0 15px #713f12; } 50% { box-shadow: 0 0 5px #713f12; } }
-
-        .fading { opacity: 0.5; filter: grayscale(0.7); animation: none !important; }
-        
-        input[type=range] { -webkit-appearance: none; background: #27272a; height: 8px; border-radius: 4px; width: 100%; margin-top: 10px; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: #fff; border: 2px solid #3b82f6; cursor: pointer; }
-        .active-fuel { background: #a855f7 !important; color: white !important; box-shadow: 0 0 15px rgba(168,85,247,0.4); }
+        .active-fuel { background: #a855f7 !important; color: white !important; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden text-[11px]">
@@ -32,51 +19,42 @@
         <div class="panel p-5">
             <div class="flex justify-between items-center mb-6">
                 <div>
-                    <h1 class="text-2xl font-black italic text-white tracking-tighter">V6.5.0 <span class="text-red-600 italic">SNIPER</span></h1>
-                    <div class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Status: High-Frequency Monitoring</div>
+                    <h1 class="text-2xl font-black italic text-white tracking-tighter">V6.5.1 <span class="text-red-600 italic">SNIPER</span></h1>
+                    <div class="text-[9px] text-zinc-500 font-bold uppercase mt-1">Status: WAP Gap Tracking</div>
                 </div>
                 <div class="flex gap-4">
-                    <button id="fuelBtn" onclick="toggleFuel()" class="bg-zinc-900 border border-zinc-700 px-6 py-2 rounded-xl text-purple-400 font-black text-[10px] uppercase transition-all">⚓ Fuel Mode</button>
-                    <input type="text" id="search" onkeydown="handleSearch(event)" placeholder="SYMBOL & ENTER" class="bg-black border border-zinc-800 px-4 py-2 rounded-xl text-blue-400 font-black outline-none w-48 focus:border-red-600 transition-all">
+                    <button id="fuelBtn" onclick="toggleFuel()" class="bg-zinc-900 border border-zinc-700 px-6 py-2 rounded-xl text-purple-400 font-black text-[10px]">⚓ Fuel Mode</button>
+                    <input type="text" id="search" onkeydown="handleSearch(event)" placeholder="SYMBOL & ENTER" class="bg-black border border-zinc-800 px-4 py-2 rounded-xl text-blue-400 outline-none w-48 focus:border-red-600">
                 </div>
             </div>
-
             <div class="grid grid-cols-4 gap-6">
                 <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5">
-                    <div class="flex justify-between font-black text-red-500"><span class="text-[10px]">🔴 SNIPER</span><span id="flash_val" class="text-white text-sm font-black">20%</span></div>
+                    <div class="flex justify-between text-red-500"><span class="text-[10px]">🔴 SNIPER</span><span id="flash_val" class="text-white text-sm font-black">20%</span></div>
                     <input type="range" id="flash_range" min="1" max="60" value="20" oninput="updateVal('flash', this.value)">
                 </div>
                 <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5">
-                    <div class="flex justify-between font-black text-yellow-500"><span class="text-[10px]">🟡 HUNTER SLP</span><span id="slp_val" class="text-white text-sm font-black">-2.5%</span></div>
+                    <div class="flex justify-between text-yellow-500"><span class="text-[10px]">🟡 HUNTER SLP</span><span id="slp_val" class="text-white text-sm font-black">-2.5%</span></div>
                     <input type="range" id="slp_range" min="-800" max="0" value="-25" oninput="updateVal('slp', this.value)">
                 </div>
                 <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5">
-                    <div class="flex justify-between font-black text-purple-500"><span class="text-[10px]">⚓ FUEL RATIO</span><span id="fuel_val" class="text-white text-sm font-black">10%</span></div>
+                    <div class="flex justify-between text-purple-500"><span class="text-[10px]">⚓ FUEL RATIO</span><span id="fuel_val" class="text-white text-sm font-black">10%</span></div>
                     <input type="range" id="fuel_range" min="1" max="60" value="10" oninput="updateVal('fuel', this.value)">
                 </div>
                 <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5">
-                    <div class="flex justify-between font-black text-blue-500"><span class="text-[10px]">💎 VAC LIMIT</span><span id="vac_val" class="text-white text-sm font-black">120</span></div>
+                    <div class="flex justify-between text-blue-500"><span class="text-[10px]">💎 VAC LIMIT</span><span id="vac_val" class="text-white text-sm font-black">120</span></div>
                     <input type="range" id="vac_range" min="10" max="500" value="120" oninput="updateVal('vac', this.value)">
                 </div>
             </div>
         </div>
-
         <div id="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-5 overflow-y-auto"></div>
     </div>
 
     <div class="w-80 bg-black border-l border-zinc-900 flex flex-col shadow-2xl">
-        <div class="p-4 border-b border-zinc-900 bg-zinc-900/20">
-            <div class="text-blue-500 font-black text-[10px] uppercase italic mb-3 flex justify-between">
-                <span>🔥 今日潛力幣 TOP 6</span>
-                <span class="text-zinc-600">5D BASELINE</span>
-            </div>
-            <div id="potential-list" class="space-y-2">
-                <div class="text-zinc-700 text-[9px] animate-pulse">Initializing Baseline Data...</div>
-            </div>
+        <div class="p-4 border-b border-zinc-900">
+            <div class="text-blue-500 font-black text-[10px] uppercase italic mb-3">🔥 今日潛力動能 (TOP 6)</div>
+            <div id="potential-list" class="space-y-2 text-[10px]"></div>
         </div>
-
         <div class="flex-1 flex flex-col p-4 overflow-hidden">
-            <div class="text-zinc-600 font-black text-[10px] text-center mb-4 pb-2 border-b border-zinc-800 uppercase italic">Live Intercept Log</div>
             <div id="logs" class="flex-1 overflow-y-auto space-y-2 pr-2"></div>
         </div>
     </div>
@@ -85,9 +63,8 @@
     const P_USER = "Gkhqyhobnxzjfwgvaiyp347m1jkhn4", P_TOKEN = "acyoe3sz15x491r1349fdcau7x6pw";
     const EXCLUDE = ['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT','BNBUSDT','BNXUSDT'];
     const LOCK_TIME = 180000;
-    let stats = {}, pinned = new Set(), keyword = "";
+    let stats = {}, pinned = new Set(), keyword = "", baselineData = {};
     let SETTINGS = { SLP: -0.025, FLASH: 0.20, FUEL: 0.10, VAC: 120, USE_FUEL: true };
-    let baselineData = {}; 
 
     function updateVal(key, val) {
         if(key === 'flash') { SETTINGS.FLASH = val/100; document.getElementById('flash_val').innerText = val+'%'; }
@@ -96,133 +73,95 @@
         if(key === 'vac') { SETTINGS.VAC = parseInt(val); document.getElementById('vac_val').innerText = val; }
     }
 
-    async function push(t, m) { fetch('https://api.pushover.net/1/messages.json',{method:'POST',body:new URLSearchParams({token:P_TOKEN,user:P_USER,title:t,message:m})}); }
-    function addLog(m, c="text-zinc-500") { 
-        const l=document.getElementById('logs'), d=document.createElement('div'); 
-        d.className=`pl-3 border-l-2 border-zinc-800 py-2 ${c} font-bold text-[10px] bg-zinc-900/20 rounded-r`; 
-        d.innerText=`[${new Date().toLocaleTimeString('zh-TW',{hour12:false})}] ${m}`; 
-        l.prepend(d);
-        if(l.children.length > 50) l.lastChild.remove();
-    }
-    
-    function handleSearch(e) { if(e.key==='Enter') { keyword = e.target.value.toUpperCase(); if(keyword) pinned.add(keyword); } }
-    function toggleFuel() { SETTINGS.USE_FUEL=!SETTINGS.USE_FUEL; document.getElementById('fuelBtn').classList.toggle('active-fuel'); }
-
-    // 🏮 潛力榜基準抓取 (異步處理，不卡主進程)
     async function initBaselines() {
         try {
             const res = await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr');
-            const allSymbols = await res.json();
-            const targets = allSymbols.filter(s => s.symbol.endsWith('USDT') && !EXCLUDE.includes(s.symbol)).sort((a,b) => b.quoteVolume - a.quoteVolume).slice(0, 80);
-            
+            const targets = (await res.json()).filter(s => s.symbol.endsWith('USDT') && !EXCLUDE.includes(s.symbol)).sort((a,b)=>b.quoteVolume-a.quoteVolume).slice(0, 100);
             for(let s of targets) {
-                const [kRes, hRes] = await Promise.all([
-                    fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${s.symbol}&interval=1d&limit=5`),
-                    fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${s.symbol}&interval=1h&limit=120`)
+                const [k, h] = await Promise.all([
+                    fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${s.symbol}&interval=1d&limit=5`).then(r=>r.json()),
+                    fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${s.symbol}&interval=1h&limit=120`).then(r=>r.json())
                 ]);
-                const kData = await kRes.json(), hData = await hRes.json();
-                
-                let tVol = 0, tQuote = 0, tAmp = 0;
-                kData.forEach(k => {
-                    tAmp += (parseFloat(k[2]) - parseFloat(k[3])) / parseFloat(k[1]);
-                    tVol += parseFloat(k[5]); tQuote += parseFloat(k[7]);
-                });
-
-                let tTrades = hData.reduce((acc, curr) => acc + parseInt(curr[8]), 0);
-                baselineData[s.symbol] = { avgAmp: tAmp / 5, wap5d: tQuote / tVol, avgTradesHr: tTrades / 120 };
+                let tVol=0, tQuote=0, tAmp=0;
+                k.forEach(v=>{ tAmp+=(v[2]-v[3])/v[1]; tVol+=parseFloat(v[5]); tQuote+=parseFloat(v[7]); });
+                baselineData[s.symbol] = { avgAmp: tAmp/5, wap5d: tQuote/tVol, avgTradesHr: h.reduce((a,c)=>a+parseInt(c[8]),0)/120 };
             }
-        } catch(e) { console.error("Baseline Error", e); }
+        } catch(e){}
     }
 
     async function update() {
         try {
             const [fRes, tRes] = await Promise.all([fetch('https://fapi.binance.com/fapi/v1/premiumIndex'), fetch('https://fapi.binance.com/fapi/v1/ticker/24hr')]);
-            const fData = await fRes.json(), tData = await tRes.json();
-            const tMap = new Map(tData.map(t=>[t.symbol, t]));
-            let results = [], potentialPool = [];
+            const fData = await fRes.json(), tData = await tRes.json(), tMap = new Map(tData.map(t=>[t.symbol,t]));
+            let results = [], pool = [];
+            const now = Date.now();
 
             fData.forEach(c => {
-                const s = c.symbol; if(!s.endsWith('USDT') || (EXCLUDE.includes(s) && !s.includes(keyword))) return;
-                const ticker = tMap.get(s); if(!ticker) return;
-
-                const pNow = parseFloat(ticker.lastPrice), fNow = parseFloat(c.lastFundingRate);
-                const vNow = parseFloat(ticker.quoteVolume), wap = parseFloat(ticker.weightedAvgPrice);
-                const tradesNow = parseInt(ticker.count);
+                const s = c.symbol; if(!s.endsWith('USDT') || EXCLUDE.includes(s)) return;
+                const t = tMap.get(s); if(!t) return;
+                const pNow = parseFloat(t.lastPrice), wap = parseFloat(t.weightedAvgPrice), trades = parseInt(t.count);
+                if(!stats[s]) stats[s]={ lastV:parseFloat(t.quoteVolume), vDeltas:[], pHist:[], lastS:0, lastH:0, hourStart: new Date().setMinutes(0,0,0), startTrades: trades };
                 
-                if(!stats[s]) {
-                    const now = new Date();
-                    stats[s]={ lastV:vNow, vDeltas:[], pHist:[], lastS:0, lastH:0, lastFR:fNow, hourStart: new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()).getTime(), startTrades: tradesNow };
-                }
+                const vDelta = Math.max(0, parseFloat(t.quoteVolume) - stats[s].lastV); stats[s].lastV = parseFloat(t.quoteVolume);
+                stats[s].vDeltas.push(vDelta); if(stats[s].vDeltas.length>300) stats[s].vDeltas.shift();
+                stats[s].pHist.push(pNow); if(stats[s].pHist.length>50) stats[s].pHist.shift();
                 
-                const vDelta = Math.max(0, vNow - stats[s].lastV); 
-                stats[s].lastV = vNow;
-                stats[s].vDeltas.push(vDelta); if(stats[s].vDeltas.length > 300) stats[s].vDeltas.shift();
-                stats[s].pHist.push(pNow); if(stats[s].pHist.length > 50) stats[s].pHist.shift();
-                
-                const ma7 = stats[s].pHist.slice(-7).reduce((a,b)=>a+b,0) / 7;
-                const ma25 = stats[s].pHist.slice(-25).reduce((a,b)=>a+b,0) / 25 || pNow;
-                const vMax15m = Math.max(...stats[s].vDeltas.slice(0, -1)) || 1;
-                const vSum15m = stats[s].vDeltas.reduce((a,b)=>a+b,0) || 1;
-                const vSum30s = stats[s].vDeltas.slice(-10).reduce((a,b)=>a+b,0);
-                const flash = (pNow - stats[s].pHist[0]) / (parseFloat(ticker.highPrice) - parseFloat(ticker.lowPrice) || 0.001);
-                const distWap = (pNow - wap) / wap;
-
-                const isSNow = (vDelta > vMax15m * 1.1) && (vSum30s > vSum15m * 0.1) && (flash >= SETTINGS.FLASH) && (pNow > ma7) && (distWap > 0.003);
-                const isHNow = (vDelta > (vSum15m/300)*2) && (flash >= 0.15) && (pNow > wap);
-
-                if(isSNow) { 
-                    if(Date.now()-stats[s].lastS > 300000) { addLog(`🔴 SNIPER TRIGGER: ${s}`, "text-red-500"); push(`🔴 SNIPER: ${s}`, `GAP:${(distWap*100).toFixed(2)}%`); }
-                    stats[s].lastS = Date.now(); 
-                }
-                if(isHNow && !isSNow) stats[s].lastH = Date.now();
-
-                const isS = (Date.now() - stats[s].lastS) < LOCK_TIME, isH = (Date.now() - stats[s].lastH) < LOCK_TIME, isF = SETTINGS.USE_FUEL && (fNow < SETTINGS.SLP) && (Math.abs(distWap) < 0.03);
-
-                if(isS || isH || isF || pinned.has(s) || (keyword && s.includes(keyword))) {
-                    results.push({ s, pNow, wap, ma7, ma25, distWap, isS, isH, isF, isSNow, isHNow, sAge:Date.now()-stats[s].lastS, hAge:Date.now()-stats[s].lastH });
-                }
+                const distWap = (pNow - wap)/wap, flash = (pNow - stats[s].pHist[0])/(t.highPrice - t.lowPrice || 0.001);
+                const isSNow = vDelta > (Math.max(...stats[s].vDeltas.slice(0,-1))*1.1) && flash >= SETTINGS.FLASH && distWap > 0.003;
+                if(isSNow) { stats[s].lastS = now; }
 
                 if(baselineData[s]) {
-                    const currentAmp = (parseFloat(ticker.highPrice) - parseFloat(ticker.lowPrice)) / parseFloat(ticker.openPrice);
-                    const vScore = currentAmp / baselineData[s].avgAmp;
-                    const elapsedMin = Math.max(1, (Date.now() - stats[s].hourStart) / 60000);
-                    const projectedHrTrades = (tradesNow - stats[s].startTrades) * (60 / elapsedMin);
-                    const hScore = projectedHrTrades / baselineData[s].avgTradesHr;
-                    if(pNow > baselineData[s].wap5d && vScore > 1.1) potentialPool.push({ s, vScore, hScore, score: (vScore * 0.5 + hScore * 0.5) });
+                    const vScore = ((t.highPrice-t.lowPrice)/t.openPrice) / baselineData[s].avgAmp;
+                    const hScore = ((trades - stats[s].startTrades)*(60/Math.max(1,(now-stats[s].hourStart)/60000))) / baselineData[s].avgTradesHr;
+                    const wapGap = ((pNow - baselineData[s].avgAmp)/baselineData[s].wap5d - 1)*100; // 5D WAP 偏移
+                    const isAbove = pNow > baselineData[s].wap5d;
+                    let status = (isAbove && vScore > 1.1) ? "🔴 強" : (!isAbove ? "⚪ 補(低WAP)" : "⚪ 補(低動能)");
+                    pool.push({ s, vScore, hScore, wapGap, wap5d: baselineData[s].wap5d, status, pNow, score: (vScore*0.5 + hScore*0.5 + (isAbove?1:0)) });
+                }
+                if((now-stats[s].lastS)<LOCK_TIME || pinned.has(s) || (keyword && s.includes(keyword))) {
+                    results.push({ s, pNow, wap, distWap, isS:(now-stats[s].lastS)<LOCK_TIME });
                 }
             });
-            results.sort((a,b) => (b.isS - a.isS) || (b.isH - a.isH) || (b.distWap - a.distWap));
-            render(results); renderPotentials(potentialPool);
-        } catch(e) {}
-    }
-
-    function render(data) {
-        const l = document.getElementById('list'); l.innerHTML = '';
-        data.forEach((item, idx) => {
-            let cls = "card-idle", label = "TRACKING", age = 0;
-            if(item.isS) { cls = "sniper-trigger"; label = "🔴 SNIPER"; age = item.sAge; if(!item.isSNow) cls += " fading"; }
-            else if(item.isH) { cls = "hunter-trigger"; label = "🟡 HUNTER"; age = item.hAge; if(!item.isHNow) cls += " fading"; }
-            else if(item.isF) { cls = "fuel-trigger"; label = "⚓ FUEL"; }
-            const div = document.createElement('div'); div.className = `card p-5 rounded-2xl ${cls}`;
-            div.innerHTML = `<div class="flex justify-between items-start"><div><div class="text-white font-black text-xl italic leading-none tracking-tighter">${item.s.replace('USDT','')}</div><div class="text-[10px] font-bold mt-2 ${item.distWap>0?'text-green-500':'text-red-500'} uppercase tracking-widest">GAP: ${(item.distWap*100).toFixed(2)}%</div></div><div class="text-right"><div class="text-white font-black text-lg leading-none">$${item.pNow.toFixed(item.pNow<1?5:2)}</div><div class="text-[9px] text-zinc-500 font-bold mt-1">WAP: ${item.wap.toFixed(item.wap<1?4:2)}</div></div></div><div class="mt-4 flex justify-between text-[8px] font-black text-zinc-500 border-t border-white/5 pt-3 uppercase"><span>MA7: ${item.ma7.toFixed(item.pNow<1?4:2)}</span><span>MA25: ${item.ma25.toFixed(item.pNow<1?4:2)}</span></div><div class="mt-3 flex justify-between items-center text-[8px] font-black"><span class="text-zinc-600">#${idx+1} RANK</span><span class="text-zinc-400 italic">${label} ${age > 0 ? (Math.ceil((LOCK_TIME-age)/1000)+'s') : ''}</span></div>`;
-            l.appendChild(div);
-        });
+            render(results); renderPotentials(pool);
+        } catch(e){}
     }
 
     function renderPotentials(pool) {
         const l = document.getElementById('potential-list');
-        pool.sort((a,b) => b.score - a.score);
-        const top6 = pool.slice(0, 6); if(top6.length === 0) return;
         l.innerHTML = '';
-        top6.forEach((item, idx) => {
-            const div = document.createElement('div'); div.className = "bg-zinc-900/40 border border-white/5 p-2 rounded-lg flex justify-between items-center";
-            div.innerHTML = `<div><span class="text-zinc-500 font-bold mr-2">${idx+1}</span><span class="text-white font-black">${item.s.replace('USDT','')}</span></div><div class="text-[9px] text-right"><div class="text-blue-400 font-bold">💓 ${item.hScore.toFixed(1)}x Speed</div><div class="text-purple-400 font-bold">🌊 ${item.vScore.toFixed(1)}x Volat</div></div>`;
+        pool.sort((a,b)=>b.score - a.score).slice(0,6).forEach(item => {
+            const gapColor = item.wapGap > 0 ? 'text-green-500' : 'text-red-500';
+            const div = document.createElement('div');
+            div.className = "bg-zinc-900/40 p-3 rounded-xl border border-white/5 space-y-1";
+            div.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <span class="font-black text-white">${item.s.replace('USDT','')} <span class="text-[8px] ml-1 ${item.status.includes('強')?'text-red-500':'text-zinc-500'}">${item.status}</span></span>
+                    <span class="text-zinc-500 font-bold">$${item.pNow.toFixed(item.pNow<1?4:2)}</span>
+                </div>
+                <div class="flex justify-between text-[9px] font-bold">
+                    <span class="text-zinc-600">5D-WAP: $${item.wap5d.toFixed(item.wap5d<1?4:2)}</span>
+                    <span class="${gapColor}">${item.wapGap > 0 ? '+' : ''}${item.wapGap.toFixed(2)}%</span>
+                </div>
+                <div class="flex justify-between text-[8px] uppercase">
+                    <span class="text-blue-400">💓 Speed: ${item.hScore.toFixed(1)}x</span>
+                    <span class="text-purple-400">🌊 Volat: ${item.vScore.toFixed(1)}x</span>
+                </div>
+            `;
+            l.appendChild(div);
+        });
+    }
+
+    function render(data) {
+        const l = document.getElementById('list'); l.innerHTML = '';
+        data.forEach(item => {
+            const div = document.createElement('div');
+            div.className = `card p-5 rounded-2xl ${item.isS?'sniper-trigger':'card-idle'}`;
+            div.innerHTML = `<div class="flex justify-between"><div><div class="text-white font-black text-xl italic">${item.s.replace('USDT','')}</div><div class="${item.distWap>0?'text-green-500':'text-red-500'} font-bold mt-1">GAP: ${(item.distWap*100).toFixed(2)}%</div></div><div class="text-right text-white font-black text-lg">$${item.pNow.toFixed(item.pNow<1?4:2)}</div></div>`;
             l.appendChild(div);
         });
     }
 
     initBaselines(); setInterval(update, 3000);
-    if(SETTINGS.USE_FUEL) document.getElementById('fuelBtn').classList.add('active-fuel');
 </script>
 </body>
 </html>
