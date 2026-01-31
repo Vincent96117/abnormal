@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V5.8.0 - MOMENTUM MASTER</title>
+    <title>⚡ SNIPER V5.8.9 - 180S SIGNAL LOCK</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; }
         .card { background: #0a0a0a; border: 1px solid #1a3a1a; cursor: pointer; transition: all 0.3s; position: relative; }
         .hunt-trigger { border: 2px solid #a855f7 !important; background: #1e1b4b !important; animation: pulse-purple 1.5s infinite; }
         .flash-trigger { border: 3px solid #facc15 !important; background: #422006 !important; animation: pulse-yellow 0.6s infinite; box-shadow: 0 0 20px rgba(250, 204, 21, 0.4); z-index: 50; }
-        .pinned { border: 2px solid #3b82f6 !important; background: #081221 !important; }
+        .flash-fading { opacity: 0.7; border-style: dashed !important; animation: none !important; }
         @keyframes pulse-purple { 0%, 100% { box-shadow: 0 0 10px #a855f7; } 50% { box-shadow: 0 0 20px #a855f7; } }
-        @keyframes pulse-yellow { 0%, 100% { transform: scale(1.02); } 50% { transform: scale(1); } }
+        @keyframes pulse-yellow { 0%, 100% { transform: scale(1.01); } 50% { transform: scale(1); } }
         .toggle-active { background: #ef4444 !important; color: white !important; }
         .meat-tag { position: absolute; bottom: -8px; right: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 900; font-size: 10px; z-index: 60; }
     </style>
@@ -20,8 +20,8 @@
         <div class="bg-zinc-900 p-4 rounded-xl mb-4 border border-white/10 shadow-2xl">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex flex-col">
-                    <h1 class="text-xl font-black text-blue-500 italic uppercase">⚡ Sniper V5.8.0 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span></h1>
-                    <div class="text-[9px] text-zinc-500 font-bold mt-1 uppercase tracking-widest">Logic: <span class="text-yellow-400">WAP + MOMENTUM (黃卡霸權)</span></div>
+                    <h1 class="text-xl font-black text-yellow-500 italic uppercase">⚡ Sniper V5.8.9 <span id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span></h1>
+                    <div class="text-[9px] text-zinc-500 font-bold mt-1 uppercase tracking-widest">Signal Lock: <span class="text-yellow-400">180 SECONDS</span></div>
                 </div>
                 <div class="flex items-center gap-3">
                     <div id="search_light" class="w-3 h-3 rounded-full bg-zinc-800 transition-all duration-300"></div>
@@ -40,7 +40,7 @@
         <div id="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto pr-2"></div>
     </div>
     <div class="w-72 bg-zinc-950 border-l border-zinc-900 flex flex-col p-4 text-[10px]">
-        <div class="text-zinc-600 font-black mb-4 border-b border-zinc-800 pb-2 uppercase text-center italic">Combat Log & Elite Data</div>
+        <div class="text-zinc-600 font-black mb-4 border-b border-zinc-800 pb-2 uppercase text-center italic">Combat Log & 180s Lock</div>
         <div id="logs" class="flex-1 overflow-y-auto space-y-2"></div>
         <button onclick="testPush()" class="mt-4 bg-zinc-800 text-zinc-500 py-2 rounded font-bold hover:text-white transition-all text-[9px]">TEST PUSH</button>
     </div>
@@ -48,7 +48,7 @@
 <script>
     const P_USER = "Gkhqyhobnxzjfwgvaiyp347m1jkhn4", P_TOKEN = "acyoe3sz15x4n91r1349fdcau7x6pw";
     const EXCLUDE = ['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT','BNBUSDT','BNXUSDT'];
-    const DEPTH = 1200, MEMORY = 300000; 
+    const LOCK_TIME = 180000; // 鎖定180秒
     let stats = {}, pinned = new Set(), currentKeyword = "";
     let SETTINGS = { SLP: -0.025, FLASH_RATIO: 0.15, FUEL_RATIO: 0.1, VAC: 80, USE_FUEL: true };
     let isUpdating = false;
@@ -57,14 +57,9 @@
         try { fetch('https://api.pushover.net/1/messages.json', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ token: P_TOKEN, user: P_USER, title, message }) }); } catch (e) {}
     }
 
-    function testPush() { sendPushover("SNIPER V5.8.0", "MOMENTUM系統啟動成功！"); addLog("Push Test Sent", "text-blue-400"); }
+    function testPush() { sendPushover("SNIPER LOCK", "180秒長效監控啟動"); addLog("Push Sent", "text-blue-400"); }
 
-    function handleSearch(e) {
-        if (e.key === 'Enter') {
-            currentKeyword = e.target.value.toUpperCase();
-            document.getElementById('search_light').className = currentKeyword ? "w-3 h-3 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e] animate-pulse" : "w-3 h-3 rounded-full bg-zinc-800";
-        }
-    }
+    function handleSearch(e) { if (e.key === 'Enter') currentKeyword = e.target.value.toUpperCase(); }
 
     function toggleFilter(key) { SETTINGS[key] = !SETTINGS[key]; document.getElementById('slopeToggle').classList.toggle('toggle-active'); }
 
@@ -95,65 +90,53 @@
                 const vNow = parseFloat(ticker.quoteVolume), wap24h = parseFloat(ticker.weightedAvgPrice);
                 const h24 = parseFloat(ticker.highPrice), l24 = parseFloat(ticker.lowPrice);
 
-                if (!stats[s]) stats[s] = { lastV: vNow, vDeltas:[], frHist:[], pHist:[], pvDeltas:[], lastTrigger:0, logged:false, lastFR: fNow, lastPush: 0 };
+                if (!stats[s]) stats[s] = { lastV: vNow, vDeltas:[], pHist:[], pvDeltas:[], lastFlash:0, lastFR: fNow, lastPush: 0 };
                 if (EXCLUDE.includes(s) && !s.includes(currentKeyword)) return;
 
-                // 資費監控
-                if (Math.abs(fNow - stats[s].lastFR) >= 0.0005) {
-                    sendPushover(`⚠️ 資費異動: ${s}`, `資費現報: ${(fNow*100).toFixed(3)}%`);
-                    stats[s].lastFR = fNow;
-                }
+                // 資費
+                if (Math.abs(fNow - stats[s].lastFR) >= 0.0005) { sendPushover(`⚠️ FR: ${s}`, `資費:${(fNow*100).toFixed(3)}%`); stats[s].lastFR = fNow; }
 
                 const vDelta = Math.max(0, vNow - stats[s].lastV);
                 stats[s].lastV = vNow;
                 stats[s].vDeltas.push(vDelta);
                 stats[s].pvDeltas.push(pNow * vDelta);
-                stats[s].frHist.push(fNow);
                 stats[s].pHist.push(pNow);
-                if (stats[s].frHist.length > DEPTH) { stats[s].vDeltas.shift(); stats[s].pvDeltas.shift(); stats[s].frHist.shift(); stats[s].pHist.shift(); }
+                if (stats[s].pHist.length > 600) { stats[s].vDeltas.shift(); stats[s].pvDeltas.shift(); stats[s].pHist.shift(); }
 
-                if (stats[s].frHist.length < 50) return;
+                if (stats[s].pHist.length < 50) return;
 
                 const v5mSum = Math.max(0.0001, stats[s].vDeltas.slice(-100).reduce((a,b)=>a+b,0));
                 const vwap5m = stats[s].pvDeltas.slice(-100).reduce((a,b)=>a+b,0) / v5mSum;
-                
-                // 動能計算: 1分鐘斜率
-                const mom = pNow - stats[s].pHist[stats[s].pHist.length-20];
-                // 能量計算: 瞬間成交量 vs 5分鐘平均
                 const volSurge = vDelta / (v5mSum / 100);
-
-                const slope = (fNow - stats[s].frHist[stats[s].frHist.length-100]) / (Math.abs(stats[s].frHist[stats[s].frHist.length-100]) || 0.0001);
-                const vacScore = ((Math.max(...stats[s].pHist.slice(-100)) - Math.min(...stats[s].pHist.slice(-100))) / v5mSum) * 100000000;
                 const flashRatio = (pNow - stats[s].pHist[stats[s].pHist.length-20]) / (h24 - l24 || 1);
                 const distToWap = (pNow - wap24h) / wap24h;
                 
-                // --- 黃卡究極條件: WAP + VWAP + 爆發 + 動能 + 能量 ---
-                const isFlash = (flashRatio >= SETTINGS.FLASH_RATIO) && (pNow > wap24h) && (pNow > vwap5m) && (mom > 0) && (volSurge > 1.5);
-                const isFuel = SETTINGS.USE_FUEL && (slope <= SETTINGS.SLP) && (vacScore >= SETTINGS.VAC) && (Math.abs(distToWap) <= 0.03) && (pNow > vwap5m);
-
-                const power = (flashRatio * 500) + (vacScore / 10) - (slope * 100);
-
-                if (isFlash || isFuel) {
-                    stats[s].lastTrigger = Date.now();
-                    if (!stats[s].logged) {
-                        addLog(`${isFlash?'⚡FLASH':'🎯FUEL'} ${s}`, isFlash?"text-yellow-400 font-black":"text-purple-400");
-                        if (isFlash && (Date.now() - stats[s].lastPush > MEMORY)) {
-                            sendPushover(`🚀 帶量突破: ${s}`, `現價:${pNow}\n破WAP:${(distToWap*100).toFixed(1)}%\n真空:${vacScore.toFixed(0)}\n量能:${volSurge.toFixed(1)}x`);
-                            stats[s].lastPush = Date.now();
-                        }
-                        stats[s].logged = true;
+                // 即時黃卡判斷
+                const isFlashNow = (flashRatio >= SETTINGS.FLASH_RATIO) && (pNow > wap24h) && (pNow > vwap5m) && (volSurge > 1.2);
+                
+                if (isFlashNow) {
+                    if (Date.now() - stats[s].lastFlash > 600000) {
+                        addLog(`⚡ FLASH ${s}`, "text-yellow-400 font-black");
+                        sendPushover(`🚀 180s 監控啟動: ${s}`, `破WAP:${(distToWap*100).toFixed(1)}% | 量能:${volSurge.toFixed(1)}x`);
                     }
-                } else { stats[s].logged = false; }
+                    stats[s].lastFlash = Date.now();
+                }
 
-                const timeSinceLast = Date.now() - stats[s].lastTrigger;
-                if (isFlash || isFuel || timeSinceLast < 600000 || pinned.has(s) || (currentKeyword && s.includes(currentKeyword))) {
-                    results.push({ s, fNow, pNow, slope, vacScore, flashRatio, power, isFlash, wap24h, vwap5m, distToWap, isTriggered: (isFlash||isFuel), linger: timeSinceLast >= 30000 && !(isFlash||isFuel) });
+                // 是否在180秒鎖定期內
+                const flashAge = Date.now() - (stats[s].lastFlash || 0);
+                const isFlash = flashAge < LOCK_TIME;
+                const isTriggered = isFlash; // 簡化邏輯，黃卡最優先
+
+                const power = (flashRatio * 500) + (volSurge * 10);
+
+                if (isFlash || pinned.has(s) || (currentKeyword && s.includes(currentKeyword))) {
+                    results.push({ s, pNow, power, isFlash, flashAge, wap24h, vwap5m, distToWap, isFlashNow });
                 }
             });
 
-            results.sort((a,b) => (pinned.has(b.s) - pinned.has(a.s)) || (b.isFlash - a.isFlash) || (b.isTriggered - a.isTriggered) || (b.power - a.power));
+            results.sort((a,b) => (pinned.has(b.s) - pinned.has(a.s)) || (b.isFlash - a.isFlash) || (b.power - a.power));
             render(results);
-        } catch (e) { console.error(e); }
+        } catch (e) {}
         isUpdating = false;
     }
 
@@ -161,12 +144,12 @@
         const list = document.getElementById('list'); list.innerHTML = '';
         results.forEach((item, idx) => {
             const isPinned = pinned.has(item.s);
-            const isBigMeat = item.vacScore > 180 && item.slope < -1.0;
+            const remaining = Math.max(0, Math.ceil((LOCK_TIME - item.flashAge)/1000));
             const div = document.createElement('div');
-            div.className = `card p-4 rounded-xl ${item.isFlash ? 'flash-trigger' : (item.isTriggered ? 'hunt-trigger' : '')} ${isPinned?'pinned':''} ${item.linger?'opacity-40':''}`;
+            div.className = `card p-4 rounded-xl ${item.isFlash ? 'flash-trigger' : ''} ${!item.isFlashNow && item.isFlash ? 'flash-fading' : ''} ${isPinned?'pinned':''}`;
             div.onclick = () => { isPinned ? pinned.delete(item.s) : pinned.add(item.s); };
             div.innerHTML = `
-                ${item.isFlash ? `<div class="meat-tag ${isBigMeat?'bg-red-600 text-white animate-bounce':'bg-yellow-500 text-black'}">${isBigMeat?'🔥 大肉格局':'⚡ 動能突破'}</div>` : ''}
+                ${item.isFlash ? `<div class="meat-tag bg-yellow-500 text-black">⚡ LOCK: ${remaining}s</div>` : ''}
                 <div class="flex justify-between items-start">
                     <div>
                         <div class="text-white font-black text-lg">${item.s.replace('USDT','')}</div>
@@ -178,10 +161,8 @@
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-white/5 text-[9px] font-bold uppercase">
-                    <div class="text-red-400">SLP: ${(item.slope*100).toFixed(1)}%</div>
-                    <div class="${item.isFlash?'text-yellow-400':'text-zinc-500'}">FLS: ${(item.flashRatio*100).toFixed(1)}%</div>
-                    <div class="text-blue-300">VAC: ${item.vacScore.toFixed(0)}</div>
-                    <div class="text-zinc-500 text-right text-[8px]">${item.isFlash?'MOMENTUM':'PREPARING'}</div>
+                    <div class="text-zinc-500">VWAP: ${item.vwap5m.toFixed(item.vwap5m<1?4:2)}</div>
+                    <div class="text-zinc-500 text-right">MOM: ${item.isFlashNow?'🔥 ACTIVE':'⌛ COOLING'}</div>
                 </div>
             `;
             list.appendChild(div);
@@ -189,10 +170,6 @@
     }
 
     setInterval(update, 3000);
-    document.getElementById('slp_range').oninput = function() { SETTINGS.SLP = this.value/1000; document.getElementById('slp_val').innerText = (this.value/10).toFixed(1)+'%'; };
-    document.getElementById('flash_range').oninput = function() { SETTINGS.FLASH_RATIO = this.value/100; document.getElementById('flash_val').innerText = this.value+'%'; };
-    document.getElementById('fuel_range').oninput = function() { SETTINGS.FUEL_RATIO = this.value/100; document.getElementById('fuel_val').innerText = this.value+'%'; };
-    document.getElementById('vac_range').oninput = function() { SETTINGS.VAC = parseInt(this.value); document.getElementById('vac_val').innerText = this.value; };
 </script>
 </body>
 </html>
