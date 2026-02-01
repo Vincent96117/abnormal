@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V6.5.7 - CLEAN MARKET</title>
+    <title>⚡ SNIPER V6.5.8 - VOLATILITY FOCUS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #e4e4e7; font-family: 'JetBrains Mono', monospace; }
@@ -16,7 +16,7 @@
     <div class="flex-1 flex flex-col overflow-hidden">
         <div class="panel p-5">
             <div class="flex justify-between items-center mb-6">
-                <h1 class="text-2xl font-black italic text-white tracking-tighter uppercase">V6.5.7 <span class="text-red-600">Pure-Trade</span></h1>
+                <h1 class="text-2xl font-black italic text-white tracking-tighter uppercase">V6.5.8 <span class="text-blue-500">Volat-Focus</span></h1>
                 <div class="flex gap-4">
                     <button id="fuelBtn" onclick="toggleFuel()" class="bg-zinc-900 border border-zinc-700 px-6 py-2 rounded-xl text-purple-400 font-black text-[10px]">⚓ Fuel Mode</button>
                     <input type="text" id="search" onkeydown="handleSearch(event)" placeholder="SEARCH SYMBOL" class="bg-black border border-zinc-800 px-4 py-2 rounded-xl text-blue-400 outline-none w-48 focus:border-red-600">
@@ -44,13 +44,12 @@
         <div id="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-5 overflow-y-auto"></div>
     </div>
 
-    <div class="w-80 bg-black border-l border-zinc-900 flex flex-col shadow-2xl">
+    <div class="w-80 bg-black border-l border-zinc-900 flex flex-col">
         <div class="p-4 border-b border-zinc-900">
-            <div class="text-red-500 font-black text-[11px] mb-3 italic tracking-tighter uppercase">🔥 實戰動能排名 TOP 10</div>
+            <div class="text-blue-500 font-black text-[11px] mb-3 italic tracking-tighter uppercase">🔥 波動優先排名 TOP 10</div>
             <div id="potential-list" class="space-y-1 overflow-y-auto max-h-[60vh] pr-1"></div>
         </div>
         <div class="p-4 flex-1 overflow-hidden">
-            <div class="text-zinc-600 font-bold text-[9px] uppercase mb-2">Live Intercept Log</div>
             <div id="logs" class="space-y-2 text-[9px] overflow-y-auto h-full pr-1"></div>
         </div>
     </div>
@@ -66,14 +65,11 @@
         document.getElementById(key+'_val').innerText = (key==='slp'?(val/10)+'%':val+'%');
     }
 
-    // 獲取可交易的幣種名單
     async function refreshActiveList() {
         try {
             const res = await fetch('https://fapi.binance.com/fapi/v1/exchangeInfo');
             const data = await res.json();
-            activeSymbols = new Set(data.symbols
-                .filter(s => s.status === 'TRADING' && s.quoteAsset === 'USDT' && s.contractType === 'PERPETUAL')
-                .map(s => s.symbol));
+            activeSymbols = new Set(data.symbols.filter(s => s.status === 'TRADING' && s.quoteAsset === 'USDT').map(s => s.symbol));
         } catch(e) {}
     }
 
@@ -84,7 +80,7 @@
                 fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${s}&interval=1d&limit=5`).then(r=>r.json()),
                 fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${s}&interval=1h&limit=120`).then(r=>r.json())
             ]);
-            let tV=0, tQ=0, tA=0; k.forEach(v=>{ tA+=(v[2]-v[3])/v[1]; tV+=parseFloat(v[5]); tQ+=parseFloat(v[7]); });
+            let tV=0, tQ=0, tA=0; k.forEach(v=>{ tA+=(parseFloat(v[2])-parseFloat(v[3]))/parseFloat(v[1]); tV+=parseFloat(v[5]); tQ+=parseFloat(v[7]); });
             baselineData[s] = { avgAmp: tA/5, wap5d: tQ/tV, avgTradesHr: h.reduce((a,c)=>a+parseInt(c[8]),0)/120 };
         } catch(e) {}
     }
@@ -92,8 +88,8 @@
     function addLog(s, msg) {
         const logs = document.getElementById('logs');
         const div = document.createElement('div');
-        div.className = "bg-zinc-900/40 p-2 rounded border-l border-red-500";
-        div.innerHTML = `<span class="text-zinc-600 text-[8px]">[${new Date().toLocaleTimeString()}]</span> <span class="text-white font-bold">${s}</span> ${msg}`;
+        div.className = "bg-zinc-900/40 p-2 rounded border-l border-red-500 text-zinc-400";
+        div.innerHTML = `<span class="text-zinc-600">[${new Date().toLocaleTimeString()}]</span> <span class="text-white font-bold">${s}</span> ${msg}`;
         logs.prepend(div); if(logs.children.length > 30) logs.lastChild.remove();
     }
 
@@ -105,24 +101,18 @@
             const now = Date.now();
 
             for (const c of fData) {
-                const s = c.symbol;
-                // 過濾下市、非交易、不感興趣、以及成交量極低的幣
-                if(!activeSymbols.has(s) || EXCLUDE.includes(s)) continue;
-                const t = tMap.get(s); 
-                if(!t || parseFloat(t.quoteVolume) < 5000000) continue; // 低於500萬美金成交額不抓
+                const s = c.symbol; if(!activeSymbols.has(s) || EXCLUDE.includes(s)) continue;
+                const t = tMap.get(s); if(!t) continue;
 
-                const pNow = parseFloat(t.lastPrice), trades = parseInt(t.count);
-                if(!stats[s]) stats[s]={ lastV:parseFloat(t.quoteVolume), vDeltas:[], pHist:[], lastS:0, hourStart: new Date().setMinutes(0,0,0), startTrades: trades };
-                
-                const vDelta = Math.max(0, parseFloat(t.quoteVolume) - stats[s].lastV); 
-                stats[s].lastV = parseFloat(t.quoteVolume);
+                const pNow = parseFloat(t.lastPrice);
+                if(!stats[s]) stats[s]={ lastV:parseFloat(t.quoteVolume), vDeltas:[], pHist:[], lastS:0, startTrades: parseInt(t.count) };
+                const vDelta = Math.max(0, parseFloat(t.quoteVolume) - stats[s].lastV); stats[s].lastV = parseFloat(t.quoteVolume);
                 stats[s].pHist.push(pNow); if(stats[s].pHist.length>50) stats[s].pHist.shift();
                 
                 const wap = parseFloat(t.weightedAvgPrice);
                 const distWap = (pNow - wap)/wap;
                 const flash = (pNow - stats[s].pHist[0])/(parseFloat(t.highPrice) - parseFloat(t.lowPrice) || 0.001);
 
-                // 卡片觸發
                 if(vDelta > (Math.max(...stats[s].vDeltas||[0])*1.1) && flash >= SETTINGS.FLASH && distWap > 0.003) {
                     if((now - stats[s].lastS) > 60000) { stats[s].lastS = now; addLog(s.replace('USDT',''), "SNIPER!"); }
                 }
@@ -134,18 +124,20 @@
                 allPool.push({ s, pNow, amp24h: (parseFloat(t.highPrice)-parseFloat(t.lowPrice))/parseFloat(t.openPrice), vol24h: parseFloat(t.quoteVolume) });
             }
 
-            // 排序並取前 15 隻進行精密分析
-            allPool.sort((a,b) => b.vol24h - a.vol24h);
-            const top15 = allPool.slice(0, 15);
-            for(let item of top15) { await getBaselines(item.s); }
+            // 根據「波動度與成交量混合」初選候選人
+            allPool.sort((a,b) => (b.amp24h * Math.log10(b.vol24h)) - (a.amp24h * Math.log10(a.vol24h)));
+            const candidates = allPool.slice(0, 20);
+            for(let item of candidates) { await getBaselines(item.s); }
 
-            let finalTop10 = top15.map(item => {
+            let finalTop10 = candidates.map(item => {
                 const b = baselineData[item.s];
                 if(!b) return { ...item, score: 0, status: "⚪ 載入中" };
-                const vScore = item.amp24h / b.avgAmp;
-                const hScore = (tMap.get(item.s).count - stats[item.s].startTrades) / b.avgTradesHr;
+                const vScore = item.amp24h / (b.avgAmp || 0.01);
                 const isAbove = item.pNow > b.wap5d;
-                return { ...item, vScore, hScore, status: isAbove ? "🔴 強" : "⚪ 補", score: vScore + (isAbove?2:0), gap: ((item.pNow/b.wap5d)-1)*100 };
+                // 強制權重：站穩 WAP + 高波動得分
+                const score = (vScore * 1.5) + (isAbove ? 10 : 0); 
+                const gap = ((item.pNow / b.wap5d) - 1) * 100;
+                return { ...item, vScore, status: isAbove ? "🔴 強" : "⚪ 補", score, gap };
             }).sort((a,b) => b.score - a.score).slice(0, 10);
 
             renderPotentials(finalTop10);
@@ -157,10 +149,10 @@
         const l = document.getElementById('potential-list'); l.innerHTML = '';
         list.forEach(item => {
             const div = document.createElement('div');
-            div.className = "bg-zinc-900/40 p-3 rounded-xl border border-white/5";
+            div.className = "bg-zinc-900/40 p-3 rounded-xl border border-white/5 space-y-1";
             div.innerHTML = `
-                <div class="flex justify-between items-center"><span class="font-black text-white text-[10px] uppercase">${item.s.replace('USDT','')} <span class="${item.status.includes('強')?'text-red-500':'text-zinc-500'} text-[8px]">${item.status}</span></span><span class="text-zinc-500 font-bold">$${item.pNow.toFixed(item.pNow<1?4:2)}</span></div>
-                <div class="flex justify-between text-[9px] mt-1"><span class="${item.gap>0?'text-green-500':'text-red-500'}">GAP: ${item.gap>0?'+':''}${item.gap.toFixed(2)}%</span><span class="text-blue-400">🌊 ${item.vScore?item.vScore.toFixed(1)+'x':'--'}</span></div>`;
+                <div class="flex justify-between items-center"><span class="font-black text-white text-[10px] uppercase">${item.s.replace('USDT','')} <span class="${item.status.includes('強')?'text-red-500':'text-zinc-500'} text-[8px] font-bold">${item.status}</span></span><span class="text-zinc-500 font-bold">$${item.pNow.toFixed(item.pNow<1?4:2)}</span></div>
+                <div class="flex justify-between text-[9px]"><span class="${item.gap>0?'text-green-500':'text-red-500'} font-bold">GAP: ${item.gap>0?'+':''}${item.gap.toFixed(2)}%</span><span class="text-blue-400">🌊 VOLAT: ${item.vScore?item.vScore.toFixed(1)+'x':'--'}</span></div>`;
             l.appendChild(div);
         });
     }
@@ -174,19 +166,10 @@
         });
     }
 
-    async function handleSearch(e){ 
-        if(e.key==='Enter'){ 
-            let k = e.target.value.toUpperCase(); if(!k) return;
-            if(!k.endsWith('USDT')) k += 'USDT';
-            await getBaselines(k); pinned.add(k); e.target.value=''; addLog(k.replace('USDT',''), "已鎖定");
-        }
-    }
-    
+    async function handleSearch(e){ if(e.key==='Enter'){ let k = e.target.value.toUpperCase(); if(!k) return; if(!k.endsWith('USDT')) k += 'USDT'; await getBaselines(k); pinned.add(k); e.target.value=''; addLog(k.replace('USDT',''), "已鎖定"); }}
     function toggleFuel(){ SETTINGS.USE_FUEL=!SETTINGS.USE_FUEL; document.getElementById('fuelBtn').classList.toggle('active-fuel'); }
     
-    refreshActiveList(); 
-    setInterval(refreshActiveList, 3600000); // 每小時更新一次交易名單
-    setInterval(update, 3000);
+    refreshActiveList(); setInterval(refreshActiveList, 3600000); setInterval(update, 3000);
 </script>
 </body>
 </html>
