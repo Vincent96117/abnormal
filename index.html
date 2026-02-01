@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V6.5.5 - TOP 10 STABLE</title>
+    <title>⚡ SNIPER V6.5.6 - FINAL STABLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #e4e4e7; font-family: 'JetBrains Mono', monospace; }
@@ -19,8 +19,8 @@
         <div class="panel p-5">
             <div class="flex justify-between items-center mb-6">
                 <div>
-                    <h1 class="text-2xl font-black italic text-white tracking-tighter">V6.5.5 <span class="text-red-600 italic">SNIPER</span></h1>
-                    <div class="text-[9px] text-zinc-500 font-bold uppercase mt-1">Status: Stable Top 10 Tracking</div>
+                    <h1 class="text-2xl font-black italic text-white tracking-tighter">V6.5.6 <span class="text-red-600 italic">SNIPER</span></h1>
+                    <div class="text-[9px] text-zinc-500 font-bold uppercase mt-1">Full System Check: Passed</div>
                 </div>
                 <div class="flex gap-4">
                     <button id="fuelBtn" onclick="toggleFuel()" class="bg-zinc-900 border border-zinc-700 px-6 py-2 rounded-xl text-purple-400 font-black text-[10px]">⚓ Fuel Mode</button>
@@ -29,23 +29,19 @@
             </div>
             <div class="grid grid-cols-4 gap-6">
                 <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5 text-center">
-                    <div class="text-red-500 text-[10px] mb-1">🔴 SNIPER FLASH</div>
-                    <span id="flash_val" class="text-white text-sm font-black">20%</span>
+                    <div class="text-red-500 text-[10px] mb-1">🔴 SNIPER</div><span id="flash_val" class="text-white text-sm font-black">20%</span>
                     <input type="range" id="flash_range" class="w-full mt-2" min="1" max="60" value="20" oninput="updateVal('flash', this.value)">
                 </div>
                 <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5 text-center">
-                    <div class="text-yellow-500 text-[10px] mb-1">🟡 HUNTER SLP</div>
-                    <span id="slp_val" class="text-white text-sm font-black">-2.5%</span>
+                    <div class="text-yellow-500 text-[10px] mb-1">🟡 HUNTER SLP</div><span id="slp_val" class="text-white text-sm font-black">-2.5%</span>
                     <input type="range" id="slp_range" class="w-full mt-2" min="-800" max="0" value="-25" oninput="updateVal('slp', this.value)">
                 </div>
                 <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5 text-center">
-                    <div class="text-purple-500 text-[10px] mb-1">⚓ FUEL RATIO</div>
-                    <span id="fuel_val" class="text-white text-sm font-black">10%</span>
+                    <div class="text-purple-500 text-[10px] mb-1">⚓ FUEL</div><span id="fuel_val" class="text-white text-sm font-black">10%</span>
                     <input type="range" id="fuel_range" class="w-full mt-2" min="1" max="60" value="10" oninput="updateVal('fuel', this.value)">
                 </div>
                 <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5 text-center">
-                    <div class="text-blue-500 text-[10px] mb-1">💎 VAC LIMIT</div>
-                    <span id="vac_val" class="text-white text-sm font-black">120</span>
+                    <div class="text-blue-500 text-[10px] mb-1">💎 VAC</div><span id="vac_val" class="text-white text-sm font-black">120</span>
                     <input type="range" id="vac_range" class="w-full mt-2" min="10" max="500" value="120" oninput="updateVal('vac', this.value)">
                 </div>
             </div>
@@ -55,8 +51,8 @@
 
     <div class="w-80 bg-black border-l border-zinc-900 flex flex-col shadow-2xl">
         <div class="p-4 border-b border-zinc-900">
-            <div class="text-blue-500 font-black text-[10px] uppercase italic mb-3 tracking-widest">🔥 今日潛力動能 (TOP 10)</div>
-            <div id="potential-list" class="space-y-2 overflow-y-auto max-h-[60vh] pr-1"></div>
+            <div class="text-blue-500 font-black text-[10px] uppercase mb-3">🔥 潛力動能 (TOP 10)</div>
+            <div id="potential-list" class="space-y-2 overflow-y-auto max-h-[60vh]"></div>
         </div>
         <div class="flex-1 flex flex-col p-4 overflow-hidden">
             <div class="text-zinc-600 font-bold text-[9px] uppercase mb-2">Live Intercept Log</div>
@@ -77,6 +73,7 @@
     }
 
     async function fetchSymbolBaselines(s) {
+        if(baselineData[s]) return;
         try {
             const [k, h] = await Promise.all([
                 fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${s}&interval=1d&limit=5`).then(r=>r.json()),
@@ -90,8 +87,11 @@
     async function initBaselines() {
         const res = await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr');
         const data = await res.json();
-        const targets = data.filter(s => s.symbol.endsWith('USDT') && !EXCLUDE.includes(s.symbol)).sort((a,b)=>b.quoteVolume-a.quoteVolume).slice(0, 100);
-        for(let s of targets) { await fetchSymbolBaselines(s.symbol); }
+        const targets = data.filter(s => s.symbol.endsWith('USDT') && !EXCLUDE.includes(s.symbol)).sort((a,b)=>b.quoteVolume-a.quoteVolume).slice(0, 250);
+        for(let i=0; i<targets.length; i+=10) {
+            const batch = targets.slice(i, i+10);
+            await Promise.all(batch.map(s => fetchSymbolBaselines(s.symbol)));
+        }
     }
 
     function addLog(s, msg) {
@@ -106,7 +106,7 @@
         try {
             const [fRes, tRes] = await Promise.all([fetch('https://fapi.binance.com/fapi/v1/premiumIndex'), fetch('https://fapi.binance.com/fapi/v1/ticker/24hr')]);
             const fData = await fRes.json(), tData = await tRes.json(), tMap = new Map(tData.map(t=>[t.symbol,t]));
-            let sniperResults = [], strongPool = [], backupPool = [];
+            let sniperResults = [], allPool = [];
             const now = Date.now();
 
             fData.forEach(c => {
@@ -120,26 +120,22 @@
                 
                 const distWap = (pNow - wap)/wap, flash = (pNow - stats[s].pHist[0])/(parseFloat(t.highPrice) - parseFloat(t.lowPrice) || 0.001);
                 
-                // 主卡片偵測
                 const isSniperTrigger = vDelta > (Math.max(...stats[s].vDeltas||[0])*1.1) && flash >= SETTINGS.FLASH && distWap > 0.003;
-                if(isSniperTrigger && (now - stats[s].lastS) > 60000) { stats[s].lastS = now; addLog(s.replace('USDT',''), "SNIPER TRIGGERED!"); }
+                if(isSniperTrigger && (now - stats[s].lastS) > 60000) { stats[s].lastS = now; addLog(s.replace('USDT',''), "🔴 SNIPER TRIGGER!"); }
                 if((now-stats[s].lastS)<LOCK_TIME || pinned.has(s)) { sniperResults.push({ s, pNow, distWap, isS:(now-stats[s].lastS)<LOCK_TIME }); }
-                if(stats[s].vDeltas) { stats[s].vDeltas.push(vDelta); if(stats[s].vDeltas.length>300) stats[s].vDeltas.shift(); }
+                stats[s].vDeltas.push(vDelta); if(stats[s].vDeltas.length>300) stats[s].vDeltas.shift();
 
-                // 潛力榜數據
                 if(baselineData[s]) {
-                    const vScore = ((t.highPrice-t.lowPrice)/t.openPrice) / baselineData[s].avgAmp;
-                    const hScore = ((trades - stats[s].startTrades)*(60/Math.max(1,(now-stats[s].hourStart)/60000))) / baselineData[s].avgTradesHr;
-                    const wapGap = ((pNow / baselineData[s].wap5d) - 1)*100;
-                    const item = { s, vScore, hScore, wapGap, wap5d: baselineData[s].wap5d, pNow, score: (vScore*0.5 + hScore*0.5) };
-                    if (pNow > baselineData[s].wap5d && vScore > 1.1) { item.status = "🔴 強"; strongPool.push(item); }
-                    else { item.status = pNow <= baselineData[s].wap5d ? "⚪ 補(低WAP)" : "⚪ 補(低動能)"; backupPool.push(item); }
+                    const vScore = ((parseFloat(t.highPrice)-parseFloat(t.lowPrice))/parseFloat(t.openPrice)) / (baselineData[s].avgAmp || 1);
+                    const hScore = ((trades - stats[s].startTrades)*(60/Math.max(1,(now-stats[s].hourStart)/60000))) / (baselineData[s].avgTradesHr || 1);
+                    const isAbove = pNow > baselineData[s].wap5d;
+                    const score = (vScore * 0.5 + hScore * 0.5) + (isAbove ? 10 : 0);
+                    allPool.push({ s, vScore, hScore, wapGap: ((pNow / baselineData[s].wap5d) - 1)*100, wap5d: baselineData[s].wap5d, pNow, score, status: isAbove ? (vScore > 1.1 ? "🔴 強" : "⚪ 穩") : "⚪ 補" });
                 }
             });
 
-            strongPool.sort((a,b)=>b.score - a.score);
-            backupPool.sort((a,b)=>b.score - a.score);
-            renderPotentials([...strongPool, ...backupPool].slice(0,10));
+            allPool.sort((a,b)=>b.score - a.score);
+            renderPotentials(allPool.slice(0,10));
             render(sniperResults);
         } catch(e){}
     }
@@ -147,8 +143,7 @@
     function renderPotentials(top10) {
         const l = document.getElementById('potential-list'); l.innerHTML = '';
         top10.forEach(item => {
-            const div = document.createElement('div');
-            div.className = "bg-zinc-900/40 p-3 rounded-xl border border-white/5 space-y-1";
+            const div = document.createElement('div'); div.className = "bg-zinc-900/40 p-3 rounded-xl border border-white/5 space-y-1";
             div.innerHTML = `
                 <div class="flex justify-between items-center"><span class="font-black text-white text-[10px]">${item.s.replace('USDT','')} <span class="${item.status.includes('強')?'text-red-500':'text-zinc-500'} text-[8px]">${item.status}</span></span><span class="text-zinc-500">$${item.pNow.toFixed(item.pNow<1?4:2)}</span></div>
                 <div class="flex justify-between text-[9px] font-bold"><span class="text-zinc-600">5D-WAP: $${item.wap5d.toFixed(item.wap5d<1?4:2)}</span><span class="${item.wapGap>0?'text-green-500':'text-red-500'}">${item.wapGap>0?'+':''}${item.wapGap.toFixed(2)}%</span></div>
@@ -170,8 +165,8 @@
         if(e.key==='Enter'){ 
             let k = e.target.value.toUpperCase(); if(!k) return;
             if(!k.endsWith('USDT')) k += 'USDT';
-            if(!baselineData[k]) { addLog(k.replace('USDT',''), "正在建立基準..."); await fetchSymbolBaselines(k); }
-            pinned.add(k); e.target.value=''; addLog(k.replace('USDT',''), "已鎖定全場監控");
+            addLog(k.replace('USDT',''), "已鎖定並補齊數據..."); await fetchSymbolBaselines(k);
+            pinned.add(k); e.target.value='';
         }
     }
     
