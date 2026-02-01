@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>⚡ SNIPER V6.5.8 - VOLATILITY FOCUS</title>
+    <title>⚡ SNIPER V6.6.0 - DATA HEADERS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: #e4e4e7; font-family: 'JetBrains Mono', monospace; }
@@ -10,13 +10,14 @@
         .sniper-trigger { border: 2px solid #ef4444 !important; background: #450a0a !important; animation: blink-red 0.6s infinite !important; }
         @keyframes blink-red { 0%, 100% { box-shadow: 0 0 20px #7f1d1d; } 50% { box-shadow: 0 0 5px #7f1d1d; } }
         .active-fuel { background: #a855f7 !important; color: white !important; }
+        .data-header { font-size: 16px; font-weight: 900; line-height: 1; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden text-[11px]">
     <div class="flex-1 flex flex-col overflow-hidden">
         <div class="panel p-5">
             <div class="flex justify-between items-center mb-6">
-                <h1 class="text-2xl font-black italic text-white tracking-tighter uppercase">V6.5.8 <span class="text-blue-500">Volat-Focus</span></h1>
+                <h1 class="text-2xl font-black italic text-white tracking-tighter uppercase">V6.6.0 <span class="text-red-600">Head-Data</span></h1>
                 <div class="flex gap-4">
                     <button id="fuelBtn" onclick="toggleFuel()" class="bg-zinc-900 border border-zinc-700 px-6 py-2 rounded-xl text-purple-400 font-black text-[10px]">⚓ Fuel Mode</button>
                     <input type="text" id="search" onkeydown="handleSearch(event)" placeholder="SEARCH SYMBOL" class="bg-black border border-zinc-800 px-4 py-2 rounded-xl text-blue-400 outline-none w-48 focus:border-red-600">
@@ -46,11 +47,11 @@
 
     <div class="w-80 bg-black border-l border-zinc-900 flex flex-col">
         <div class="p-4 border-b border-zinc-900">
-            <div class="text-blue-500 font-black text-[11px] mb-3 italic tracking-tighter uppercase">🔥 波動優先排名 TOP 10</div>
-            <div id="potential-list" class="space-y-1 overflow-y-auto max-h-[60vh] pr-1"></div>
+            <div class="text-zinc-500 font-black text-[10px] mb-3 italic tracking-tighter uppercase">🔥 核心動能榜 (TOP 10)</div>
+            <div id="potential-list" class="space-y-2 overflow-y-auto h-[70vh] pr-1"></div>
         </div>
         <div class="p-4 flex-1 overflow-hidden">
-            <div id="logs" class="space-y-2 text-[9px] overflow-y-auto h-full pr-1"></div>
+            <div id="logs" class="space-y-1 text-[9px] overflow-y-auto h-full pr-1"></div>
         </div>
     </div>
 
@@ -88,9 +89,9 @@
     function addLog(s, msg) {
         const logs = document.getElementById('logs');
         const div = document.createElement('div');
-        div.className = "bg-zinc-900/40 p-2 rounded border-l border-red-500 text-zinc-400";
-        div.innerHTML = `<span class="text-zinc-600">[${new Date().toLocaleTimeString()}]</span> <span class="text-white font-bold">${s}</span> ${msg}`;
-        logs.prepend(div); if(logs.children.length > 30) logs.lastChild.remove();
+        div.className = "bg-zinc-900/40 p-2 rounded border-l border-red-500 text-zinc-500 text-[8px]";
+        div.innerHTML = `<span class="text-white font-bold">${s}</span> ${msg}`;
+        logs.prepend(div); if(logs.children.length > 20) logs.lastChild.remove();
     }
 
     async function update() {
@@ -103,9 +104,9 @@
             for (const c of fData) {
                 const s = c.symbol; if(!activeSymbols.has(s) || EXCLUDE.includes(s)) continue;
                 const t = tMap.get(s); if(!t) continue;
-
                 const pNow = parseFloat(t.lastPrice);
-                if(!stats[s]) stats[s]={ lastV:parseFloat(t.quoteVolume), vDeltas:[], pHist:[], lastS:0, startTrades: parseInt(t.count) };
+                
+                if(!stats[s]) stats[s]={ lastV:parseFloat(t.quoteVolume), vDeltas:[], pHist:[], lastS:0, hourStart: new Date().setMinutes(0,0,0), startTrades: parseInt(t.count) };
                 const vDelta = Math.max(0, parseFloat(t.quoteVolume) - stats[s].lastV); stats[s].lastV = parseFloat(t.quoteVolume);
                 stats[s].pHist.push(pNow); if(stats[s].pHist.length>50) stats[s].pHist.shift();
                 
@@ -124,7 +125,6 @@
                 allPool.push({ s, pNow, amp24h: (parseFloat(t.highPrice)-parseFloat(t.lowPrice))/parseFloat(t.openPrice), vol24h: parseFloat(t.quoteVolume) });
             }
 
-            // 根據「波動度與成交量混合」初選候選人
             allPool.sort((a,b) => (b.amp24h * Math.log10(b.vol24h)) - (a.amp24h * Math.log10(a.vol24h)));
             const candidates = allPool.slice(0, 20);
             for(let item of candidates) { await getBaselines(item.s); }
@@ -132,12 +132,13 @@
             let finalTop10 = candidates.map(item => {
                 const b = baselineData[item.s];
                 if(!b) return { ...item, score: 0, status: "⚪ 載入中" };
+                const t = tMap.get(item.s);
                 const vScore = item.amp24h / (b.avgAmp || 0.01);
+                const hScore = (parseInt(t.count) - stats[item.s].startTrades) / (b.avgTradesHr * (Math.max(1, (now - stats[item.s].hourStart)/3600000)) || 1);
                 const isAbove = item.pNow > b.wap5d;
-                // 強制權重：站穩 WAP + 高波動得分
-                const score = (vScore * 1.5) + (isAbove ? 10 : 0); 
+                const score = (vScore * 2.0) + (hScore * 1.0) + (isAbove ? 15 : 0);
                 const gap = ((item.pNow / b.wap5d) - 1) * 100;
-                return { ...item, vScore, status: isAbove ? "🔴 強" : "⚪ 補", score, gap };
+                return { ...item, vScore, hScore, status: isAbove ? "🔴 強" : "⚪ 補", score, gap };
             }).sort((a,b) => b.score - a.score).slice(0, 10);
 
             renderPotentials(finalTop10);
@@ -149,10 +150,26 @@
         const l = document.getElementById('potential-list'); l.innerHTML = '';
         list.forEach(item => {
             const div = document.createElement('div');
-            div.className = "bg-zinc-900/40 p-3 rounded-xl border border-white/5 space-y-1";
+            div.className = "bg-zinc-900/60 p-4 rounded-2xl border border-white/10 space-y-2";
             div.innerHTML = `
-                <div class="flex justify-between items-center"><span class="font-black text-white text-[10px] uppercase">${item.s.replace('USDT','')} <span class="${item.status.includes('強')?'text-red-500':'text-zinc-500'} text-[8px] font-bold">${item.status}</span></span><span class="text-zinc-500 font-bold">$${item.pNow.toFixed(item.pNow<1?4:2)}</span></div>
-                <div class="flex justify-between text-[9px]"><span class="${item.gap>0?'text-green-500':'text-red-500'} font-bold">GAP: ${item.gap>0?'+':''}${item.gap.toFixed(2)}%</span><span class="text-blue-400">🌊 VOLAT: ${item.vScore?item.vScore.toFixed(1)+'x':'--'}</span></div>`;
+                <div class="flex justify-between items-center border-b border-white/5 pb-1">
+                    <span class="font-black text-white text-xs uppercase italic">${item.s.replace('USDT','')}</span>
+                    <span class="${item.status.includes('強')?'text-red-500':'text-zinc-500'} text-[9px] font-black tracking-widest uppercase">${item.status}</span>
+                </div>
+                <div class="flex justify-between items-end">
+                    <div>
+                        <div class="text-[8px] text-purple-400 font-bold">💓 SPEED</div>
+                        <div class="data-header text-purple-500">${item.hScore ? item.hScore.toFixed(1)+'x' : '--'}</div>
+                    </div>
+                    <div>
+                        <div class="text-[8px] text-blue-400 font-bold text-right">🌊 VOLAT</div>
+                        <div class="data-header text-blue-500 text-right">${item.vScore?item.vScore.toFixed(1)+'x':'--'}</div>
+                    </div>
+                </div>
+                <div class="flex justify-between text-[9px] pt-1">
+                    <span class="text-zinc-600">$${item.pNow.toFixed(item.pNow<1?4:2)}</span>
+                    <span class="${item.gap>0?'text-green-500':'text-red-500'} font-black">GAP: ${item.gap.toFixed(2)}%</span>
+                </div>`;
             l.appendChild(div);
         });
     }
@@ -166,9 +183,8 @@
         });
     }
 
-    async function handleSearch(e){ if(e.key==='Enter'){ let k = e.target.value.toUpperCase(); if(!k) return; if(!k.endsWith('USDT')) k += 'USDT'; await getBaselines(k); pinned.add(k); e.target.value=''; addLog(k.replace('USDT',''), "已鎖定"); }}
+    async function handleSearch(e){ if(e.key==='Enter'){ let k = e.target.value.toUpperCase(); if(!k) return; if(!k.endsWith('USDT')) k += 'USDT'; await getBaselines(k); pinned.add(k); e.target.value=''; addLog(k.replace('USDT',''), "LOCK"); }}
     function toggleFuel(){ SETTINGS.USE_FUEL=!SETTINGS.USE_FUEL; document.getElementById('fuelBtn').classList.toggle('active-fuel'); }
-    
     refreshActiveList(); setInterval(refreshActiveList, 3600000); setInterval(update, 3000);
 </script>
 </body>
